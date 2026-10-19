@@ -76,7 +76,7 @@ function render(){const bottomNav=document.querySelector('.bottom-nav');if(botto
 function organizeScreen(){
  const children=Array.from(app.children);
  if(!children.length)return;
- const pinCount=tab==='home'?2:tab==='tasks'?5:tab==='guests'?4:tab==='money'?3:morePage?1:2;
+ const pinCount=tab==='home'?2:tab==='tasks'?4:tab==='guests'?3:tab==='money'?2:1;
  const pinned=document.createElement('div'),panel=document.createElement('section');
  pinned.className='screen-fixed';
  panel.className='screen-panel';

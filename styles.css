@@ -248,3 +248,16 @@ dialog.guest-dialog{
 .activity-row b{color:#40584f}
 .activity-row time{display:block;margin-top:2px;font-size:10px;color:#8a948a}
 @media(max-width:350px){.connection{max-width:78px}.header-actions{gap:1px}.notification-bell{width:29px;flex-basis:29px}}
+
+
+/* Final compact rhythm for navigation rows and dense card content */
+#main .screen-panel button[data-action="more"]{padding:10px 11px!important;gap:9px!important;min-height:48px}
+#main .screen-panel button[data-action="more"]>span:first-child{font-size:18px!important;width:22px!important}
+#main .screen-panel button[data-action="more"] b{font-size:12px!important}
+#main .screen-panel button[data-action="more"] .small{font-size:10px!important;margin-top:1px!important}
+#main .screen-panel .filterbar{margin:3px 0 7px}
+#main .screen-panel .seat-pool{padding:7px;min-height:52px}
+#main .screen-panel .page-actions{gap:5px}
+#main .screen-panel .btn{min-height:32px}
+#main .screen-panel .metric{padding:9px 10px}
+#main .screen-panel .caption{margin-top:5px}

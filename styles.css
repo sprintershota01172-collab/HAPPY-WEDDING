@@ -738,3 +738,44 @@ dialog::backdrop{background:rgba(20,35,26,.40)!important;backdrop-filter:none!im
  .setup-date-grid{gap:5px!important}
  .setup-date-grid>select{padding-left:6px!important;padding-right:20px!important;background-position:right 5px center!important}
 }
+
+
+/* r9: savings owned accounts, purpose and bank ledger — phone sized */
+.finance-available{display:flex;align-items:center;justify-content:space-between;gap:9px;
+ background:rgba(255,255,255,.68);border:1px solid #dfe8db;border-radius:10px;
+ padding:8px 10px;font-size:10.5px;font-weight:700;color:#667c6c;}
+.finance-available b{font-family:-apple-system,BlinkMacSystemFont,"Helvetica Neue",sans-serif;
+ font-variant-numeric:tabular-nums;font-size:clamp(15px,4.6vw,20px);font-weight:710;
+ color:#365a48;overflow-wrap:anywhere;text-align:right;}
+.savings-see-all{display:flex;gap:7px;justify-content:flex-end;margin:8px 0;}
+.savings-see-all>.btn{min-height:35px!important;font-size:11px!important;flex:1 1 auto;
+ border:1px solid #d8e3d9!important;white-space:normal;line-height:1.2}
+.savings-heading{gap:8px;padding:8px 1px 6px}
+.savings-heading>b{font-size:15px;color:#36594b}
+.savings-heading .btn{white-space:nowrap;font-size:10px!important}
+.savings-account-top{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:9px;margin-bottom:8px}
+.savings-account-top>div{display:flex;flex-direction:column;gap:5px;padding:10px;
+ background:#f1f5ef;border:1px solid #dfe9de;border-radius:12px;min-width:0}
+.savings-account-top span{font-size:10px;color:#728576;font-weight:730;line-height:1.3}
+.savings-account-top strong{font-family:-apple-system,BlinkMacSystemFont,"Helvetica Neue",sans-serif;
+ font-variant-numeric:tabular-nums;letter-spacing:-.013em;font-size:clamp(17px,5vw,22px);
+ font-weight:730;color:#375746;overflow-wrap:anywhere}
+.savings-list{gap:7px!important;margin:7px 0!important}
+.saving-row{display:flex!important;align-items:center!important;gap:9px!important;min-height:69px!important;
+ border:1px solid #e1e8de!important;padding:9px 10px!important;background:#fff}
+.saving-row .content{flex:1;min-width:0}
+.saving-row .item-title{font-size:12px!important}
+.saving-row .item-sub{font-size:10px!important;margin-top:3px!important}
+.saving-purpose{display:inline-block;margin-left:7px;max-width:100%;font-size:9px;
+ font-weight:670;color:#627e69;background:#eaf1e7;border-radius:7px;
+ padding:3px 6px;overflow-wrap:anywhere}
+.saving-right{display:flex;align-items:flex-end;flex-direction:column;gap:6px;flex:0 0 auto;min-width:0;max-width:42%}
+.saving-right strong{font-family:-apple-system,BlinkMacSystemFont,"Helvetica Neue",sans-serif;
+ font-size:clamp(13px,3.7vw,16px);font-variant-numeric:tabular-nums;font-weight:720;
+ color:#36594a;overflow-wrap:anywhere;text-align:right}
+.saving-right .btn{font-size:10px!important;min-height:27px!important;padding:4px 10px!important}
+@media(max-width:360px){
+ .saving-purpose{margin-left:4px;font-size:9px;padding:2px 4px}
+ .savings-heading>b{font-size:13px}
+ .saving-right{max-width:39%}
+}

@@ -160,3 +160,5 @@ https://github.com/sprintershota01172-collab/HAPPY-WEDDING
 
 - GitHub Pagesのキャッシュ更新を促すため、CSS・JavaScriptの参照バージョンを `20261020r2` に変更。
 
+
+- v6.1：担当者フィルター・進捗表示とゲストの切替タブを上部に固定し、一覧のみページ切替にしました。バージョン：20261020r3。

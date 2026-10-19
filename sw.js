@@ -1,5 +1,5 @@
-const CACHE = 'happy-wedding-v6-20261020r2';
-const SHELL = ['./','./index.html','./styles.css?v=20261020r2','./app.js?v=20261020r2','./sync.js','./notifications.js','./manifest.webmanifest','./icon.svg'];
+const CACHE = 'happy-wedding-v7-20261020r3';
+const SHELL = ['./','./index.html','./styles.css?v=20261020r3','./app.js?v=20261020r3','./sync.js','./notifications.js','./manifest.webmanifest','./icon.svg'];
 self.addEventListener('install', e => { e.waitUntil(caches.open(CACHE).then(c=>c.addAll(SHELL)).then(()=>self.skipWaiting())); });
 self.addEventListener('activate', e => { e.waitUntil(caches.keys().then(keys=>Promise.all(keys.filter(k=>k!==CACHE).map(k=>caches.delete(k)))).then(()=>self.clients.claim())); });
 self.addEventListener('fetch',event=>{

@@ -5,3 +5,8 @@
 
 .subtasks{display:grid;gap:6px;margin-top:9px;padding:8px 10px;border-radius:10px;background:#fffbfa}.subtasks label{display:flex;gap:7px;align-items:center;font-size:11px;color:#836f73;line-height:1.4}.subtasks input{accent-color:#d89bab;width:17px;height:17px;flex:none}
 .calendar-grid{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:4px}.calendar-weekday{text-align:center;font-size:10px;color:#988687;padding:7px 0}.calendar-cell{height:46px;border:1px solid #f3eae6;border-radius:9px;background:#fffdfc;display:flex;align-items:center;justify-content:center;flex-direction:column;gap:2px;min-width:0;font-size:11px}.calendar-cell.today{border-color:#dbacb6}.calendar-cell.selected{background:#efd0d8;border-color:#dca9b5;color:#965c6a}.cal-dot{font-size:9px;color:#b47485;white-space:nowrap;background:#fff0f1;padding:1px 4px;border-radius:7px}
+
+/* 添付資料はタスク一覧で簡潔に確認 */
+.task-memo{margin:5px 0 3px;white-space:pre-wrap;overflow-wrap:anywhere;line-height:1.5}
+.task-reference{display:inline-block;margin:5px 0;color:#af7281;text-decoration:underline;text-underline-offset:3px;font-size:12px}
+.task-thumbnail{display:block;max-width:96px;max-height:76px;width:auto;height:auto;object-fit:cover;border-radius:10px;margin:6px 0;border:1px solid #f2e6e4}

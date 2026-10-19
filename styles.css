@@ -12,3 +12,161 @@
 .task-thumbnail{display:block;max-width:96px;max-height:76px;width:auto;height:auto;object-fit:cover;border-radius:10px;margin:6px 0;border:1px solid #f2e6e4}
 
 .bottom-nav[hidden]{display:none!important}
+
+
+/* Wedding Atelier — refined, viewport-first mobile shell (v2) */
+:root{
+ --ink:#30403d;--accent:#b87886;--rose:#f1dedf;--sage:#8eada2;
+ --paper:#faf8f5;--line:#eae7e1;--muted:#8a8d8a;
+ --shadow:0 5px 24px rgba(45,58,53,.045);
+ font-family:-apple-system,BlinkMacSystemFont,"Hiragino Kaku Gothic ProN","Noto Sans JP",sans-serif;
+ color:var(--ink);background:var(--paper);
+}
+html,body{width:100%;height:100%;overflow:hidden;overscroll-behavior:none}
+body{background:radial-gradient(ellipse at 8% -5%,#f5e7e7 0%,transparent 42%),linear-gradient(160deg,#fcfaf8 0%,#f6f8f4 100%);font-size:13px}
+#app{
+ height:100dvh;max-height:100dvh;min-height:0;padding:0;
+ display:flex;flex-direction:column;overflow:hidden;isolation:isolate;
+}
+.app-header{
+ position:relative;top:auto;left:auto;transform:none;flex:0 0 auto;
+ width:100%;height:calc(57px + env(safe-area-inset-top));
+ padding:env(safe-area-inset-top) 18px 0;
+ background:rgba(250,248,245,.95);border-bottom:1px solid #e9e5df;
+ box-shadow:none;backdrop-filter:blur(18px);
+}
+.brand{font-family:Georgia,"Times New Roman",serif;font-size:19px;font-weight:600;letter-spacing:-.025em;color:#43554e}
+.brand-symbol{font-size:20px;color:var(--accent);margin-right:1px}
+.connection{font-size:9px;padding:5px 8px;background:#eaf1eb;color:#668678;border:1px solid #e0eae2;max-width:108px}
+.icon-button{color:#62776c;font-size:19px;border-radius:12px}
+#main{
+ flex:1 1 auto;height:auto;min-height:0;max-height:100%;
+ padding:13px 14px 8px;display:flex;flex-direction:column;
+ gap:9px;overflow:hidden;animation:none;
+}
+.screen-fixed{flex:0 0 auto;min-width:0;display:flex;flex-direction:column}
+.screen-panel{
+ flex:1 1 auto;min-height:0;min-width:0;overflow-y:auto;overflow-x:hidden;
+ overscroll-behavior:contain;-webkit-overflow-scrolling:touch;
+ padding:1px 2px 13px;scrollbar-width:thin;scrollbar-color:#dccccc transparent;
+ mask-image:linear-gradient(to bottom,#000 0%,#000 96%,transparent 100%);
+}
+.screen-panel::-webkit-scrollbar{width:3px}
+.screen-panel::-webkit-scrollbar-thumb{background:#e1d6d1;border-radius:8px}
+.screen-panel:focus{outline:none}
+.bottom-nav{
+ position:relative;left:auto;bottom:auto;transform:none;flex:0 0 auto;
+ width:100%;height:calc(64px + env(safe-area-inset-bottom));
+ padding:5px 7px calc(4px + env(safe-area-inset-bottom));
+ background:rgba(251,249,247,.98);border-top:1px solid #ece7df;
+ box-shadow:0 -8px 24px rgba(36,52,43,.028);backdrop-filter:blur(20px);
+}
+.bottom-nav button{color:#919a94;gap:2px;border-radius:13px;font-size:10px;font-weight:550;transition:background .18s,color .18s,transform .18s}
+.bottom-nav button.active{color:#a46a79;background:#f6e9e8;font-weight:750}
+.bottom-nav button:active{transform:scale(.96)}
+.nav-icon{font-size:21px;line-height:23px;font-weight:400}
+.page-head{margin:1px 0 8px;min-height:37px;gap:8px}
+.page-head h1{font-size:20px;font-weight:750;color:#36483f;letter-spacing:-.035em}
+.page-desc{font-size:10px;margin:-5px 0 9px;line-height:1.4;letter-spacing:.01em}
+.section-title{margin:12px 2px 7px}
+.section-title h2{font-size:12px;font-weight:770;letter-spacing:.02em;color:#596960}
+.card{
+ border-radius:17px;border:1px solid rgba(219,218,209,.82);background:rgba(255,255,255,.92);
+ box-shadow:var(--shadow);padding:12px 13px;margin-bottom:9px;
+}
+.card h2{font-size:13px}
+.hero{
+ min-height:0;border:1px solid #e4d8cf;border-radius:21px;
+ background:radial-gradient(circle at 95% 6%,#e8d7d3 0%,transparent 43%),
+  linear-gradient(129deg,#f4eeea 0%,#f9f7f2 50%,#e8f0ea 100%);
+ padding:12px 14px 13px;margin:0 0 8px;
+ box-shadow:0 11px 22px rgba(100,90,72,.055);
+}
+.hero:before,.hero:after{font-size:41px;color:#bca9a5;opacity:.2}
+.hero:before{top:-13px;left:-12px}.hero:after{right:-12px;bottom:-20px}
+.hero .overline{color:#987c78;font-size:9px;letter-spacing:.3em;font-weight:600}
+.hero .days{font-family:Georgia,"Times New Roman",serif;color:#40564e;font-size:62px;font-weight:400;line-height:.92;margin:5px 0 2px;letter-spacing:-.06em}
+.hero .days-label{color:#927c79;font-size:9px;letter-spacing:.21em;font-weight:700}
+.hero .wedding-date{margin-top:6px;font-size:11px;font-weight:650;letter-spacing:.09em;color:#647d72}
+.hero .couple{margin-top:4px;font-size:14px;font-weight:650;letter-spacing:.11em;color:#a3717a}
+.hero-message{margin:7px 0 0;font-size:10px;color:#807d77;line-height:1.35}
+.metric-grid{gap:8px}
+.metric{border:1px solid #eae8e2;background:#fffdfb;border-radius:15px;padding:10px 11px;box-shadow:0 2px 10px rgba(47,56,42,.026)}
+.metric .value{font-size:20px;margin-top:4px;color:#344b43;letter-spacing:-.045em}
+.metric .detail{font-size:9px;margin-top:3px}
+.metric .symbol{font-size:14px;color:#b7838c}
+.progress{height:5px;background:#eee9e4}
+.progress>span{background:linear-gradient(90deg,#b98591,#84ad9c)}
+.pill{font-size:9px;padding:3px 6px;font-weight:650}
+.btn{border-radius:11px;font-size:11px;padding:9px 11px;min-height:35px;letter-spacing:.006em}
+.btn.primary{background:#40584f;box-shadow:0 4px 12px rgba(53,83,72,.13)}
+.btn.light{background:#f4e8e8;color:#a26876}
+.btn.ghost{background:#f1f1ec;color:#6d7a6f}
+.btn.tiny{font-size:10px;padding:6px 9px;min-height:29px}
+.list{gap:7px}
+.item{border:1px solid #eae8e2;background:rgba(255,255,255,.96);border-radius:14px;padding:10px;gap:9px;box-shadow:0 2px 10px rgba(54,66,60,.02)}
+.item-title{font-size:12px;font-weight:720;color:#3d524a;line-height:1.4}
+.item-sub{font-size:10px;line-height:1.5;margin-top:4px}
+.check{flex-basis:21px;width:21px;height:21px;border-color:#c6b3ae;border-radius:7px}
+.check:checked{background:#85a99a;border-color:#85a99a}
+.tabs{margin:3px -14px 8px;padding:2px 14px 5px;gap:6px;flex:0 0 auto}
+.tab{border-radius:11px;border-color:#e5e4df;font-size:11px;padding:8px 11px;background:#fffefa;color:#728177;font-weight:650}
+.tab.active{background:#40584f;border-color:#40584f;color:#fff}
+.tab .role-dot{width:8px;height:8px}
+.filterbar{margin:0 0 7px}
+.empty{padding:23px 13px;background:rgba(255,255,255,.8);border:1px dashed #dedcd6;color:#89968c;font-size:11px}
+.empty .flower{font-size:27px;color:#b28e94}
+.amount{color:#354e44;font-weight:770;letter-spacing:-.04em}
+.donut-inner b{color:#425a50}
+.donut-inner small{color:#9eaaa2}
+.bar-track{height:7px;background:#eeeae5}
+.bar-row{margin:10px 0}
+.avatar{background:#e8ede7;color:#7b9385;width:34px;height:34px}
+.seat-table{border-color:#e6e7e0;background:#fffefa;border-radius:16px}
+.table-circle{background:#edf0e8;border-color:#c6d6cb;color:#617a6c}
+.seat-pool{background:#fffefa;border-color:#bdcbbf}
+.field{margin:10px 0}
+.field>label{color:#566d61}
+.field input:not([type=checkbox]),.field textarea,.field select{
+ border:1px solid #dfe5dd;border-radius:12px;background:#fff;
+ color:#344a3f;font-size:16px!important;
+}
+dialog{background:#fafaf7;border-radius:22px;max-height:min(85dvh,770px);overscroll-behavior:contain}
+dialog::backdrop{background:#25382db3;backdrop-filter:blur(5px)}
+.modal-head{background:#fafaf7ed}
+.callout{background:#eff3ee;color:#677c6c}
+.notice{background:#fffaf3;border-color:#ede1cc}
+.setup{
+ height:100%;min-height:0;overflow-y:auto;overscroll-behavior:contain;
+ padding:4px 3px 12px;max-width:430px;justify-content:center;
+}
+.setup-flower{font-size:43px;color:#b98591}
+.setup h1{font-family:Georgia,serif;color:#425a50;font-weight:500;font-size:28px;letter-spacing:-.03em}
+.setup p{color:#859287;font-size:12px}
+.setup .card{padding:17px}
+.task-reference{color:#a06b78}
+.task-thumbnail{border-color:#e0e6dc}
+.calendar-cell{border-color:#e9ebe5;border-radius:8px}
+.calendar-cell.today{border-color:#8fac9b}
+.calendar-cell.selected{background:#e8f0e8;color:#456457;border-color:#98b4a2}
+@media(max-height:740px){
+ #main{padding-top:9px;gap:6px}
+ .hero{padding:9px 12px 10px}
+ .hero .days{font-size:52px}
+ .hero-message{margin-top:5px}
+ .metric{padding:8px 10px}
+ .metric .value{font-size:18px}
+ .screen-fixed>.page-head{margin-bottom:5px}
+ .screen-fixed>.card{margin-bottom:5px}
+ .screen-fixed>.tabs{margin-bottom:4px}
+}
+@media(max-width:365px){
+ #main{padding-left:11px;padding-right:11px}
+ .tabs{margin-left:-11px;margin-right:-11px;padding-left:11px;padding-right:11px}
+ .brand{font-size:17px}
+ .connection{max-width:83px}
+ .metric .value{font-size:17px}
+}
+@media(prefers-reduced-motion:reduce){
+ .bottom-nav button{transition:none}
+}

@@ -360,6 +360,8 @@ function assignGuest(uid,tableId){
  write('guests',{...g,tableId});selectedGuest='';toast('席次表を更新しました');
 }
 document.addEventListener('click',ev=>{
+ const navBtn=ev.target.closest('.bottom-nav [data-tab]');
+ if(navBtn){ev.preventDefault();chooseTab(navBtn.dataset.tab);return;}
  const t=ev.target.closest('[data-action]');if(t){if(['toggle-task','toggle-subtask','toggle-item','toggle-thanks','toggle-payment'].includes(t.dataset.action))return;ev.preventDefault();handleAction(t);return}
  const seat=ev.target.closest('[data-drop-table]');
  if(seat&&selectedGuest){assignGuest(selectedGuest,seat.dataset.dropTable);return}

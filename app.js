@@ -97,7 +97,7 @@ function renderSetup(){const step=state.setup===1?2:1;return '<div class="setup"
 function financeSummary(){
  const savingsSet=state.savings!==null&&state.savings!==undefined&&state.savings!=='';
  // Until contracted/estimated, the category's provisional budget is counted.
- const categoryFuture=state.categories.reduce((sum,c)=>sum+Math.max(0,(forecastCat(c)||n(c.budget))-paidCategory(c)),0);
+ const categoryFuture=state.categories.reduce((sum,c)=>{const planned=state.payments.filter(p=>p.category===c.id).reduce((a,p)=>a+n(p.amount),0);const base=forecastCat(c)||n(c.budget)||planned;return sum+Math.max(0,base-paidCategory(c))},0);
  const extraFuture=state.extras.filter(x=>!x.paid).reduce((sum,x)=>sum+Math.max(0,n(x.amount)),0);
  const required=categoryFuture+extraFuture;
  const savings=savingsSet?Math.max(0,n(state.savings)):0;
@@ -255,7 +255,7 @@ function renderSubpage(){
  return moreTitle('準備');
 }
 function renderSettings(){
- return moreTitle('基本設定')+'<div class="card"><form data-form="settings">'+field('挙式日','date','date',state.date,true)+field('新郎の呼び名','couple0','text',state.couple[0])+field('新婦の呼び名','couple1','text',state.couple[1])+'<button class="btn primary btn-wide">設定を保存</button></form></div><div class="card"><h2>期限のお知らせ</h2><p class="small muted">アプリを開いた時、直近3日と期限を過ぎた予定をお知らせできます。ブラウザが対応する場合のみシステム通知も表示します。</p>'+btn(state.reminders?'通知をオフにする':'通知をオンにする','notifications','','light')+'<p class="caption">パートナーの変更は共有接続中にリアルタイム通知。閉じている間は配信設定が必要です。</p>'+btn('パートナー通知を許可','partner-push','','light')+'</div><div class="card"><h2>保存について</h2><p class="small muted">端末に自動保存します。iPhoneの「ホーム画面に追加」前後で、ブラウザ内の保存領域が別になる場合があります。大切なデータはバックアップを保存してください。</p>'+btn('バックアップへ','more','backup')+'</div>';
+ return moreTitle('基本設定')+'<div class="card"><form data-form="settings">'+field('挙式日','date','date',state.date,true)+field('新郎の呼び名','couple0','text',state.couple[0])+field('新婦の呼び名','couple1','text',state.couple[1])+'<button class="btn primary btn-wide">設定を保存</button></form></div><div class="card"><h2>リマインド</h2><p class="small muted">アプリを開いたとき・戻ったときに期限をお知らせします。</p>'+btn(state.reminders?'通知をオフにする':'通知をオンにする','notifications','','light')+'<form data-form="reminder-settings"><div class="field"><label>何日前からお知らせする？</label><select name="reminderDays">'+[[0,'当日'],[1,'1日前'],[3,'3日前'],[7,'7日前'],[14,'14日前']].map(v=>'<option value="'+v[0]+'" '+(n(state.reminderDays)===v[0]?'selected':'')+'>'+v[1]+'</option>').join('')+'</select></div><button class="btn light btn-wide" type="submit">通知タイミングを保存</button></form><p class="caption">パートナーの変更は共有接続中にリアルタイム通知。閉じている間は配信設定が必要です。</p>'+btn('パートナー通知を許可','partner-push','','light')+'</div><div class="card"><h2>保存について</h2><p class="small muted">端末に自動保存します。iPhoneの「ホーム画面に追加」前後で、ブラウザ内の保存領域が別になる場合があります。大切なデータはバックアップを保存してください。</p>'+btn('バックアップへ','more','backup')+'</div>';
 }
 function renderBackup(){
  return moreTitle('バックアップと書き出し')+'<div class="card"><h2>JSONバックアップ</h2><p class="small muted">ゲスト、タスク、予算、写真などを一括保存・復元します。</p><div class="page-actions">'+btn('バックアップを保存','export-json','','primary')+btn('バックアップを読み込む','import-json')+'</div><input id="import-file" type="file" accept=".json,application/json" hidden></div><div class="card"><h2>CSV書き出し</h2><p class="small muted">Excelで使える形式で項目別に保存します。</p><div class="field"><select id="csv-section">'+ARRAYS.map(k=>'<option value="'+k+'">'+e(({tasks:'タスク',guests:'ゲスト',payments:'支払い',categories:'予算項目',gifts:'ご祝儀',roles:'役割',tables:'卓',timeline:'当日進行',vendors:'業者',ideas:'アイデア',items:'持ち物',thanks:'お礼',comments:'コメント'})[k])+'</option>').join('')+'</select></div>'+btn('CSVを保存','export-csv','','light')+'</div><p class="caption">JSONファイルには個人情報が含まれるため、第三者には渡さず安全に保管してください。</p>';
@@ -358,6 +358,7 @@ async function submit(form){
  const type=form.dataset.form,uid=form.dataset.id||'',f=new FormData(form),v=values(form);
  if(type==='setup1'){if(!v.date){toast('挙式日を選択してください');return}state.date=v.date;state.setup=1;save();render();return}
  if(type==='setup2'){state.myRole=v.role;state.setup=2;save();render();return}
+ if(type==='reminder-settings'){setSetting('reminderDays',Math.max(0,Math.min(30,n(v.reminderDays))));toast('リマインド日数を保存しました');return}
  if(type==='settings'){state.date=v.date;state.couple=[v.couple0.trim()||'新郎',v.couple1.trim()||'新婦'];save();if(syncEnabled())queueChange('settings','main',settingsRemote());announcePartnerChange('settings');toast('基本設定を保存しました');render();return}
  if(type==='sync'){
   const cfg={apiKey:v.apiKey.trim(),projectId:v.projectId.trim(),appId:v.appId.trim(),authDomain:v.authDomain.trim()};
@@ -418,18 +419,35 @@ function download(name,text,mime){
  const blob=new Blob([mime.includes('csv')?'\ufeff':'',text],{type:mime});const u=URL.createObjectURL(blob),a=document.createElement('a');a.href=u;a.download=name;document.body.append(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(u),30000)
 }
 function toCsv(list){const keys=Array.from(new Set(list.flatMap(row=>Object.keys(row))));const encode=v=>'"'+String((typeof v==='object'&&v!==null)?JSON.stringify(v):(v??'')).replaceAll('"','""')+'"';return [keys.map(encode).join(','),...list.map(row=>keys.map(k=>encode(row[k])).join(','))].join('\r\n')}
+
+function reminderCandidates(){
+ const lead=Math.max(0,Math.min(30,n(state.reminderDays??3)));
+ const all=[
+  ...state.tasks.filter(x=>!x.done&&x.due).map(x=>({id:'task-'+x.id,title:x.title,date:x.due,lead,kind:'タスク'})),
+  ...state.payments.filter(x=>!x.paid&&x.due).map(x=>({id:'payment-'+x.id,title:x.title,date:x.due,lead,kind:'支払い'})),
+  ...state.schedules.filter(x=>!x.done&&x.date).map(x=>({id:'schedule-'+x.id,title:x.title,date:x.date,lead:x.remindDays===''||x.remindDays==null?lead:Math.max(0,n(x.remindDays)),kind:'予定'})),
+  ...state.extras.filter(x=>!x.paid&&x.due).map(x=>({id:'extra-'+x.id,title:x.title,date:x.due,lead,kind:'必要なもの'}))
+ ];
+ return all.filter(x=>distance(x.date)<=x.lead).sort((a,b)=>a.date.localeCompare(b.date));
+}
 function remind(){
  if(!state.reminders||!state.setup)return;
- const key='happy_wedding_reminder_'+today();
- if(localStorage.getItem(key))return;
- const todo=state.tasks.filter(t=>!t.done&&t.due&&distance(t.due)<=3);
- const due=state.payments.filter(t=>!t.paid&&t.due&&distance(t.due)<=3);
- if(!todo.length&&!due.length)return;
- localStorage.setItem(key,'1');
- const msg='期限が近いタスク '+todo.length+'件・お支払い '+due.length+'件があります。';
+ const active=reminderCandidates();
+ if(!active.length)return;
+ const unseen=active.filter(x=>{
+  const key='happy_wedding_alert_'+today()+'_'+x.id+'_'+x.date+'_'+x.lead;
+  if(localStorage.getItem(key))return false;
+  try{localStorage.setItem(key,'1')}catch{}
+  return true;
+ });
+ if(!unseen.length)return;
+ const msg=unseen.length===1?unseen[0].kind+'「'+unseen[0].title+'」の期限を確認してください。':unseen.length+'件の予定・タスク・支払いなどを確認してください。';
  toast(msg);
- if('Notification' in window&&Notification.permission==='granted')try{new Notification('Happy Wedding ✿',{body:msg,icon:'./icon.svg'})}catch{}
+ if('Notification' in window&&Notification.permission==='granted'&&!document.hidden){
+  try{new Notification('Happy Wedding リマインド',{body:msg,icon:'./icon.svg'})}catch{}
+ }
 }
+
 async function handleAction(target){
  const action=target.dataset.action,uid=target.dataset.id;
  if(!action)return;
@@ -501,6 +519,7 @@ document.getElementById('header-settings').addEventListener('click',()=>{tab='mo
 dialog.addEventListener('click',ev=>{if(ev.target===dialog)dialog.close()});
 window.addEventListener('online',()=>{if(syncEnabled())connect()});
 window.addEventListener('focus',()=>remind());
+document.addEventListener('visibilitychange',()=>{if(!document.hidden)remind()});
 try{cloud=JSON.parse(localStorage.getItem(CLOUD_KEY)||'null')}catch{}
 setupPartnerNotifications({getRoom:()=>cloud?.room||'',getRole:()=>nameRole(state.myRole),toast,modal});
 render();setTimeout(remind,600);

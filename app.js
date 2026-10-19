@@ -272,8 +272,8 @@ function choices(label,name,options,value=''){return '<div class="field"><label>
 function selectField(name,label,opts,value){return choices(label,name,opts.map(x=>[x.id,x.name]),value)}
 function checkField(label,name,value){return '<label class="row field"><input type="checkbox" name="'+e(name)+'" '+(value?'checked':'')+'> '+e(label)+'</label>'}
 function modal(title,body,formType='',uid=''){
- dialog.classList.toggle('guest-dialog',formType==='guest');
-  modalContent.innerHTML='<div class="modal-head"><h2>'+title+'</h2><button class="close-modal" type="button" data-action="close-modal" aria-label="閉じる">×</button></div><div class="modal-body">'+(formType?'<form '+(formType==='guest'?'class="guest-editor" novalidate ':'')+'data-form="'+formType+'" data-id="'+e(uid)+'">'+body+'<div class="form-actions">'+(uid?'<button type="button" class="btn danger" data-action="delete" data-id="'+e(uid)+'" data-type="'+e(formType)+'">削除</button>':'')+'<button type="button" class="btn ghost" data-action="close-modal">キャンセル</button><button class="btn primary" type="submit">保存する</button></div></form>':body)+'</div>';dialog.showModal();
+ dialog.classList.toggle('guest-dialog',formType==='guest'||formType==='present');
+  modalContent.innerHTML='<div class="modal-head"><h2>'+title+'</h2><button class="close-modal" type="button" data-action="close-modal" aria-label="閉じる">×</button></div><div class="modal-body">'+(formType?'<form '+(formType==='guest'||formType==='present'?'class="guest-editor" novalidate ':'')+'data-form="'+formType+'" data-id="'+e(uid)+'">'+body+'<div class="form-actions">'+(uid?'<button type="button" class="btn danger" data-action="delete" data-id="'+e(uid)+'" data-type="'+e(formType)+'">削除</button>':'')+'<button type="button" class="btn ghost" data-action="close-modal">キャンセル</button><button class="btn primary" type="submit">保存する</button></div></form>':body)+'</div>';dialog.showModal();
 }
 function modalEdit(type,uid=''){
  const plural={task:'tasks',category:'categories',payment:'payments',gift:'gifts',guest:'guests',table:'tables',role:'roles',timeline:'timeline',vendor:'vendors',idea:'ideas',item:'items',thanks:'thanks',schedule:'schedules',extra:'extras',present:'presents'};
@@ -319,15 +319,15 @@ function modalEdit(type,uid=''){
    +checkField('購入・支払済み','paid',x.paid);
  }else if(type==='present'){
   title=uid?'お祝いを編集':'お祝いの記録';
-  b=field('くれた人','sender','text',x.sender||'',true)
+  b='<div class="guest-steps" role="tablist" aria-label="お祝い登録">'+[['received','いただいたお祝い'],['returned','お返しの記録']].map((v,i)=>'<button type="button" role="tab" aria-selected="'+(i===0)+'" data-action="guest-step" data-id="'+v[0]+'" class="guest-step-tab '+(i===0?'active':'')+'">'+v[1]+'</button>').join('')+'</div>'
+   +'<div class="guest-step-panel" data-step="received">'+field('くれた人','sender','text',x.sender||'',true)
    +choices('種類','kind',[['品物','品物'],['商品券','商品券'],['現金','現金'],['その他','その他']],x.kind||'品物')
    +field('何をもらった？','received','text',x.received||'',true)
-   +field('もらったものの金額・目安（円）','value','number',x.value||0,false,'min="0"')
-   +'<div class="gift-form-separator">お返しの内容</div>'
-   +field('何を返した？','returnItem','text',x.returnItem||'')
+   +field('もらったものの金額・目安（円）','value','number',x.value||0,false,'min="0"')+'</div>'
+   +'<div class="guest-step-panel" data-step="returned" hidden>'+field('何を返した？','returnItem','text',x.returnItem||'')
    +field('お返し金額（円）','returnValue','number',x.returnValue||0,false,'min="0"')
    +field('お返し日','returnDate','date',x.returnDate||'')
-   +checkField('お返し済み','returned',x.returned)+area('メモ','note',x.note||'');
+   +checkField('お返し済み','returned',x.returned)+area('メモ','note',x.note||'')+'</div>';
  }else if(type==='thanks'){
   title=uid?'お礼を編集':'お礼を追加';b=field('お礼をする相手','recipient','text',x.recipient,true)+choices('種類','type',[['内祝い','内祝い'],['お礼状','お礼状'],['引出物の発送','引出物の発送'],['その他','その他']],x.type||'内祝い')+area('品物・発送・メモ','note',x.note||'')+checkField('完了','done',x.done);
  }
@@ -335,7 +335,7 @@ function modalEdit(type,uid=''){
 }
 
 function showGuestStep(step){
- const form=dialog.querySelector('form[data-form="guest"]');
+ const form=dialog.querySelector('form[data-form="guest"],form[data-form="present"]');
  if(!form)return;
  form.querySelectorAll('.guest-step-panel').forEach(el=>{el.hidden=el.dataset.step!==step});
  form.querySelectorAll('.guest-step-tab').forEach(el=>{
@@ -381,6 +381,7 @@ async function submit(form){
  if(type==='category'){for(const k of ['budget','estimate','contract','manualPaid'])item[k]=Math.max(0,n(v[k]));item.color=old.color||COLORS[state.categories.length%COLORS.length];item.name=v.name.trim()}
  if(type==='payment'){item.amount=Math.max(0,n(v.amount));item.paid=flBool(f,'paid')}
  if(type==='gift'){item.amount=Math.max(0,n(v.amount))}
+ if(type==='present'&&(!v.sender?.trim()||!v.received?.trim())){showGuestStep('received');(v.sender?.trim()?form.elements.received:form.elements.sender)?.focus();toast('贈ってくれた人とお祝いの内容を入力してください');return}
  if(type==='guest'&&!v.name?.trim()){showGuestStep('basic');form.elements.name?.focus();toast('ゲストのお名前を入力してください');return}
  if(type==='guest'){item.gift=Math.max(0,n(v.gift));for(const x of ['transport','stay','sent'])item[x]=flBool(f,x)}
  if(type==='table'){item.capacity=Math.max(1,n(v.capacity)||8)}

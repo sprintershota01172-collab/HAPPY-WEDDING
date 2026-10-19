@@ -885,8 +885,8 @@ async function handleAction(target){
  if(action==='calendar-export'){exportWeddingCalendar();return}
  if(action==='money-add'){modal('何を追加する？','<div class="stack">'+btn('貯金・口座を追加','new-saving','','light')+btn('新婚旅行費を入力','edit-honeymoon','','light')+btn('必要なものを追加','new-extra','','light')+btn('予算項目を追加','new-category','','light')+btn('支払い予定を追加','new-payment','','light')+btn('ご祝儀を追加','new-gift','','light')+'</div>');return}
  if(action==='edit-savings'){moneyView='accounts';render();return}
- if(action==='new-saving'){savingEditor();return}
- if(action==='edit-saving'){savingEditor(uid);return}
+ if(action==='new-saving'){if(dialog.open)closeModal();savingEditor();return}
+ if(action==='edit-saving'){if(dialog.open)closeModal();savingEditor(uid);return}
  if(action==='edit-honeymoon'){const c=honeymoonCategory();modal('新婚旅行費の登録・更新',field('旅行の予定総額（円）','honeymoonTotal','number',c?(forecastCat(c)||n(c.budget)):0,true,'min="0" inputmode="numeric"')+field('支払済み（円）','honeymoonPaid','number',c?.manualPaid||0,false,'min="0" inputmode="numeric"')+field('旅行予算（円）','honeymoonBudget','number',c?.budget||0,false,'min="0" inputmode="numeric"')+'<p class="field-hint">支払いタブで完了登録した旅行費は別途加算されます。二重入力にご注意ください。</p>','honeymoon');return}
  if(action==='budget-total'){modal('全体予算',field('予算総額（円）','budget','number',state.budgetTotal,true,'min="0"'),'budget-total');return}
  if(action==='comment'){modal('ふたりのひとこと',area('メッセージ','text'),'comment');return}

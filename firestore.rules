@@ -1,0 +1,33 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // 共有コード自体が秘密の招待キーです。第三者に共有しないでください。
+    function validRoom(roomId) {
+      return roomId.matches('^[0-9a-f]{48}$');
+    }
+    function signedIn() {
+      return request.auth != null;
+    }
+    function recordValid(recordId) {
+      return request.resource.data.keys().hasAll(['collection', 'id', 'value', 'deleted', 'updatedAt'])
+        && request.resource.data.keys().hasOnly(['collection', 'id', 'value', 'deleted', 'updatedAt'])
+        && request.resource.data.collection in [
+          'settings','roles','categories','tasks','payments','gifts','guests',
+          'tables','timeline','vendors','ideas','items','thanks','comments'
+        ]
+        && request.resource.data.id is string
+        && recordId == request.resource.data.collection + '_' + request.resource.data.id
+        && request.resource.data.deleted is bool
+        && request.resource.data.updatedAt is int
+        && (request.resource.data.value is map || request.resource.data.value == null);
+    }
+    match /rooms/{roomId}/records/{recordId} {
+      allow get, list: if signedIn() && validRoom(roomId);
+      allow create, update: if signedIn() && validRoom(roomId) && recordValid(recordId);
+      allow delete: if false;
+    }
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}

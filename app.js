@@ -126,6 +126,7 @@ function renderHome(){
  const coming=upcomingSchedule(2);
  let h='<div class="home-event-top"><div class="home-date"><span>WEDDING DAY</span><strong>'+e(state.date.replaceAll('-',' / '))+'</strong></div><div class="home-count"><b>'+Math.abs(left)+'</b><span>'+(left>=0?'DAYS LEFT':'DAYS SINCE')+'</span></div></div>';
  h+=financePanel(true);
+ if(state.reminders){const alerts=reminderCandidates();if(alerts.length)h+='<button type="button" class="deadline-banner" data-action="show-deadlines">期限を確認する予定が <b>'+alerts.length+'件</b><span>›</span></button>'}
  h+='<div class="home-actions">'+btn('＋ 予定を登録','new-schedule','','primary')+btn('＋ 必要なもの','new-extra','','light')+btn('資金管理','nav','money','ghost')+'</div>';
  h+='<div class="home-progress"><span>準備の進捗 <b>'+progress(state.tasks)+'%</b></span><span>'+done+' / '+total+' 完了</span><div class="progress"><span style="width:'+progress(state.tasks)+'%"></span></div></div>';
  h+=section('直近の予定',btn('すべて見る →','more','appointments'))+'<div class="home-preview">';
@@ -480,6 +481,7 @@ async function handleAction(target){
  if(action==='more'){tab='more';morePage=uid;render();window.scrollTo(0,0);return}
  if(action==='close-modal'){dialog.close();return}
  if(action==='guest-step'){showGuestStep(uid);return}
+ if(action==='show-deadlines'){const alerts=reminderCandidates();modal('期限が近い予定',alerts.length?'<div class="activity-list">'+alerts.map(x=>'<div class="activity-row"><b>'+e(x.kind)+'</b>　'+e(x.title)+'<time>'+e(x.date)+(distance(x.date)<0?'・期限超過':'')+'</time></div>').join('')+'</div>':empty('確認が必要な予定はありません。'));return}
  if(action==='partner-push'){await enablePartnerPush(cloud?.pushPublicKey||'');return}
 
  if(action==='task-filter'){taskRole=uid;render();return}

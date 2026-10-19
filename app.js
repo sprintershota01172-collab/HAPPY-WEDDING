@@ -126,7 +126,7 @@ function splitPageable(node,depth=0){
   const fragment=node.cloneNode(false);
   fragment.classList.add('page-piece');
   fragment.appendChild(child);
-  if(child.matches?.('.calendar-grid')){
+  if(child.matches?.('.calendar-grid,.timeline,.list,.idea-grid,.table-grid')){
    for(const piece of splitPageable(child,depth+1)){
     const wrapped=node.cloneNode(false);
     wrapped.classList.add('page-piece');
@@ -242,7 +242,7 @@ function renderHome(){
 }
 function taskCard(t,compact=false){
  const who=role(t.role),sub=t.subtasks||[],subDone=sub.filter(s=>s.done).length;
- return '<div class="item '+(t.done?'done':'')+'"><input class="check" aria-label="'+e(t.title)+'を完了" type="checkbox" data-action="toggle-task" data-id="'+e(t.id)+'" '+(t.done?'checked':'')+'><div class="content"><div class="item-title">'+e(t.title)+'</div><div class="item-sub"><span class="role-dot" style="background:'+e(who?.color||'#ccc')+'"></span> '+e(who?.name||'未担当')+(t.due?' · '+dayLabel(t.due):'')+' '+(overdue(t)?badge('期限を過ぎています','danger'):dueSoon(t)?badge('もうすぐ','warn'):'')+' '+formatPriority(t.priority)+(sub.length?' · '+subDone+'/'+sub.length+' 小項目':'')+'</div>'+(t.memo&&!compact?'<p class="small muted task-memo">'+e(t.memo)+'</p>':'')+(t.url&&!compact&&safeUrl(t.url)?'<a class="task-reference" href="'+e(safeUrl(t.url))+'" target="_blank" rel="noopener noreferrer">参考リンク ↗</a>':'')+(t.photo&&!compact?'<img class="task-thumbnail" src="'+e(t.photo)+'" alt="タスク添付写真" loading="lazy">':'')+(sub.length&&!compact?'<div class="subtasks">'+sub.map(x=>'<label><input type="checkbox" data-action="toggle-subtask" data-id="'+e(t.id)+'" data-subid="'+e(x.id)+'" '+(x.done?'checked':'')+'> '+e(x.title)+'</label>').join('')+'</div>':'')+'</div>'+btn('編集','edit-task',t.id)+'</div>';
+ return '<div class="item '+(t.done?'done':'')+'"><input class="check" aria-label="'+e(t.title)+'を完了" type="checkbox" data-action="toggle-task" data-id="'+e(t.id)+'" '+(t.done?'checked':'')+'><div class="content"><div class="item-title">'+e(t.title)+'</div><div class="item-sub"><span class="role-dot" style="background:'+e(who?.color||'#ccc')+'"></span> '+e(who?.name||'未担当')+(t.due?' · '+dayLabel(t.due):'')+' '+(overdue(t)?badge('期限を過ぎています','danger'):dueSoon(t)?badge('もうすぐ','warn'):'')+' '+formatPriority(t.priority)+(sub.length?' · '+subDone+'/'+sub.length+' 小項目':'')+'</div>'+(t.memo&&!compact?'<p class="small muted task-memo">'+e(t.memo)+'</p>':'')+(t.url&&!compact&&safeUrl(t.url)?'<a class="task-reference" href="'+e(safeUrl(t.url))+'" target="_blank" rel="noopener noreferrer">参考リンク ↗</a>':'')+(t.photo&&!compact?'<img class="task-thumbnail" src="'+e(t.photo)+'" alt="タスク添付写真" loading="lazy">':'')+(sub.length&&!compact?'<div class="subtasks">'+sub.slice(0,3).map(x=>'<label><input type="checkbox" data-action="toggle-subtask" data-id="'+e(t.id)+'" data-subid="'+e(x.id)+'" '+(x.done?'checked':'')+'> '+e(x.title)+'</label>').join('')+(sub.length>3?'<small class="muted">ほか '+(sub.length-3)+' 件は編集画面で確認</small>':'')+'</div>':'')+'</div>'+btn('編集','edit-task',t.id)+'</div>';
 }
 function renderTasks(){
  const done=state.tasks.filter(t=>t.done).length;
@@ -384,9 +384,32 @@ function selectField(name,label,opts,value){return choices(label,name,opts.map(x
 function checkField(label,name,value){return '<label class="row field"><input type="checkbox" name="'+e(name)+'" '+(value?'checked':'')+'> '+e(label)+'</label>'}
 function modal(title,body,formType='',uid=''){
  dialog.classList.toggle('guest-dialog',formType==='guest'||formType==='present');
-  modalContent.innerHTML='<div class="modal-head"><h2>'+title+'</h2><button class="close-modal" type="button" data-action="close-modal" aria-label="閉じる">×</button></div><div class="modal-body">'+(formType?'<form '+(formType==='guest'||formType==='present'?'class="guest-editor" novalidate ':'')+'data-form="'+formType+'" data-id="'+e(uid)+'">'+body+'<div class="form-actions">'+(uid?'<button type="button" class="btn danger" data-action="delete" data-id="'+e(uid)+'" data-type="'+e(formType)+'">削除</button>':'')+'<button type="button" class="btn ghost" data-action="close-modal">キャンセル</button><button class="btn primary" type="submit">保存する</button></div></form>':body)+'</div>';dialog.showModal();initializeModalPager();
+  modalContent.innerHTML='<div class="modal-head"><h2>'+title+'</h2><button class="close-modal" type="button" data-action="close-modal" aria-label="閉じる">×</button></div><div class="modal-body">'+(formType?'<form '+(formType==='guest'||formType==='present'?'class="guest-editor" novalidate ':'')+'data-form="'+formType+'" data-id="'+e(uid)+'">'+body+'<div class="form-actions">'+(uid?'<button type="button" class="btn danger" data-action="delete" data-id="'+e(uid)+'" data-type="'+e(formType)+'">削除</button>':'')+'<button type="button" class="btn ghost" data-action="close-modal">キャンセル</button><button class="btn primary" type="submit">保存する</button></div></form>':body)+'</div>';dialog.showModal();initializeModalPager();setupReadOnlyModalPages();
 }
 
+
+let dialogListPager=null;
+function setDialogListPage(index){
+ const p=dialogListPager;if(!p)return;
+ p.index=Math.min(p.pages-1,Math.max(0,index));
+ p.rows.forEach((row,i)=>row.hidden=Math.floor(i/p.size)!==p.index);
+ p.nav.querySelector('.page-counter').textContent=(p.index+1)+' / '+p.pages;
+ p.nav.querySelector('[data-action="dialog-prev"]').disabled=p.index===0;
+ p.nav.querySelector('[data-action="dialog-next"]').disabled=p.index===p.pages-1;
+}
+function setupReadOnlyModalPages(){
+ dialogListPager=null;
+ const list=dialog.querySelector('.activity-list');
+ if(!list||list.children.length<5)return;
+ const rows=Array.from(list.children);
+ const size=innerHeight<680?3:5;
+ const nav=document.createElement('div');
+ nav.className='page-navigation dialog-navigation';
+ nav.innerHTML='<button type="button" class="page-arrow" data-action="dialog-prev">‹ 前</button><span class="page-counter"></span><button type="button" class="page-arrow" data-action="dialog-next">次 ›</button>';
+ list.after(nav);
+ dialogListPager={rows,size,index:0,pages:Math.ceil(rows.length/size),nav};
+ setDialogListPage(0);
+}
 let editorPages=null;
 function showEditorPage(index){
  if(!editorPages)return;
@@ -455,7 +478,7 @@ function closeModal(){
  const focused=document.activeElement;
  if(focused&&dialog.contains(focused))focused.blur();
  dialog.close();
- editorPages=null;
+ editorPages=null;dialogListPager=null;
  dialog.classList.remove('editor-dialog');
 }
 
@@ -657,6 +680,7 @@ async function handleAction(target){
  const action=target.dataset.action,uid=target.dataset.id;
  if(!action)return;
  if(action==='pager-prev'||action==='pager-next'){if(activePager)presentPage(activePager.index+(action==='pager-next'?1:-1));return}
+ if(action==='dialog-prev'||action==='dialog-next'){if(dialogListPager)setDialogListPage(dialogListPager.index+(action==='dialog-next'?1:-1));return}
  if(action==='form-prev'||action==='form-next'){
   if(editorPages){
    if(action==='form-prev')showEditorPage(editorPages.index-1);
@@ -737,6 +761,8 @@ document.getElementById('header-settings').addEventListener('click',()=>{tab='mo
 dialog.addEventListener('click',ev=>{if(ev.target===dialog)closeModal()});
 window.addEventListener('online',()=>{if(syncEnabled())connect()});
 window.addEventListener('focus',()=>remind());
+let lastFrameWidth=window.innerWidth;
+window.addEventListener('resize',()=>{if(dialog.open)return;const width=window.innerWidth;if(Math.abs(width-lastFrameWidth)>35){lastFrameWidth=width;render()}});
 document.addEventListener('visibilitychange',()=>{if(!document.hidden)remind()});
 setInterval(()=>{if(!document.hidden)remind()},60000);
 try{cloud=JSON.parse(localStorage.getItem(CLOUD_KEY)||'null')}catch{}

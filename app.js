@@ -17,7 +17,8 @@ function load(){try{const v=JSON.parse(localStorage.getItem(KEY)||'null');if(!v)
 let state=load(), tab='home', taskRole='all', guestView='list', moneyView='overview', paymentMonth='',paymentDateSelected='', morePage='',selectedGuest='', cloud=null;
 const app=document.getElementById('main'),dialog=document.getElementById('modal'),modalContent=document.getElementById('modal-content'),toastEl=document.getElementById('toast');
 let toastTimer=0,renderScheduled=false,completionSound=false;
-const panelScrollPositions=new Map();
+const pageByKey=new Map();
+let activePager=null;
 const $=(s,root=document)=>root.querySelector(s);
 const $$=(s,root=document)=>Array.from(root.querySelectorAll(s));
 const e=(x)=>String(x??'').replaceAll('&','&amp;').replaceAll('<','&lt;').replaceAll('>','&gt;').replaceAll('"','&quot;').replaceAll("'",'&#39;');
@@ -71,27 +72,90 @@ function progress(items){return items.length?Math.round(items.filter(x=>x.done).
 function formatPriority(x){return x==='high'?badge('優先','danger'):x==='low'?badge('ゆっくり','mint'):''}
 function overdue(x){return x.due&&!x.done&&distance(x.due)<0}
 function dueSoon(x){return x.due&&!x.done&&distance(x.due)>=0&&distance(x.due)<=7}
-function render(){updatePartnerBell();const oldPanel=app.querySelector('.screen-panel');if(oldPanel?.dataset.screenKey)panelScrollPositions.set(oldPanel.dataset.screenKey,oldPanel.scrollTop);const bottomNav=document.querySelector('.bottom-nav');if(bottomNav)bottomNav.hidden=!state.setup;document.querySelectorAll('.bottom-nav button').forEach(b=>b.classList.toggle('active',b.dataset.tab===tab));$('#connection').title=syncEnabled()?'共有コード設定済み':'端末に保存';if(!state.setup){app.innerHTML=renderSetup();return}
+function render(){updatePartnerBell();const bottomNav=document.querySelector('.bottom-nav');if(bottomNav)bottomNav.hidden=!state.setup;document.querySelectorAll('.bottom-nav button').forEach(b=>b.classList.toggle('active',b.dataset.tab===tab));$('#connection').title=syncEnabled()?'共有コード設定済み':'端末に保存';if(!state.setup){app.innerHTML=renderSetup();return}
  app.innerHTML=tab==='home'?renderHome():tab==='tasks'?renderTasks():tab==='money'?renderMoney():tab==='guests'?renderGuests():renderMore();
  organizeScreen();
 }
 
-/** Keep the app shell fixed. Only the detail panel has vertical scrolling. */
+
+/**
+ * All content pages are real DOM nodes: nothing scrolls, and no row is cut by a mask.
+ * Large lists are segmented into individual item shells before measuring pages.
+ */
+function getScreenKey(){
+ return tab+'|'+(tab==='money'?moneyView:tab==='guests'?guestView:tab==='tasks'?taskRole:morePage);
+}
+function splitPageable(node,limit,depth=0){
+ if(!(node instanceof HTMLElement)||depth>4)return [node];
+ const children=Array.from(node.children);
+ if(children.length<2)return [node];
+ // Multiple cards/items may be grouped in a list. Preserve their parent styles.
+ const isFlow=node.matches('.list,.idea-grid,.table-grid,.home-preview,.activity-list,.timeline,.stack');
+ const containsRows=node.matches('.card')&&children.some(x=>x.matches('.bar-row,.timeline,.item,.setting-row'));
+ if(!isFlow&&!containsRows)return [node];
+ const fragments=[];
+ while(node.firstChild){
+  const part=node.cloneNode(false);
+  part.classList.add('page-piece');
+  part.appendChild(node.firstChild);
+  fragments.push(part);
+ }
+ return fragments;
+}
+function presentPage(page){
+ if(!activePager||!activePager.pages.length)return;
+ const p=Math.max(0,Math.min(page,activePager.pages.length-1));
+ activePager.index=p;
+ pageByKey.set(activePager.key,p);
+ activePager.panel.replaceChildren(...activePager.pages[p]);
+ activePager.panel.scrollTop=0;
+ const prev=activePager.nav.querySelector('[data-action="pager-prev"]');
+ const next=activePager.nav.querySelector('[data-action="pager-next"]');
+ prev.disabled=p===0;
+ next.disabled=p>=activePager.pages.length-1;
+ activePager.nav.querySelector('.page-counter').textContent=(p+1)+' / '+activePager.pages.length;
+ activePager.nav.hidden=activePager.pages.length<=1;
+}
+function paginateScreen(panel,nav,key){
+ const elements=Array.from(panel.children);
+ const atomic=elements.flatMap(node=>splitPageable(node));
+ const pages=[];
+ let page=[];
+ panel.replaceChildren();
+ const available=Math.max(120,panel.clientHeight);
+ for(const piece of atomic){
+  panel.appendChild(piece);
+  if(panel.scrollHeight>available+1&&page.length){
+   panel.removeChild(piece);
+   pages.push(page);
+   panel.replaceChildren(piece);
+   page=[piece];
+  }else page.push(piece);
+ }
+ if(page.length)pages.push(page);
+ if(!pages.length)pages.push([]);
+ activePager={panel,nav,pages,index:0,key};
+ presentPage(pageByKey.get(key)||0);
+}
 function organizeScreen(){
  const children=Array.from(app.children);
  if(!children.length)return;
- const pinCount=tab==='home'?2:tab==='tasks'?4:tab==='guests'?4:tab==='money'?3:morePage?1:2;
  const pinned=document.createElement('div'),panel=document.createElement('section');
- pinned.className='screen-fixed';
- panel.className='screen-panel';
- panel.tabIndex=0;
- panel.setAttribute('aria-label',({home:'ホームの詳細',tasks:'タスク一覧',money:'予算・支払いの詳細',guests:'ゲスト一覧・席次表',more:'その他の項目'})[tab]);
- const screenKey=tab+'|'+(tab==='money'?moneyView:tab==='guests'?guestView:tab==='tasks'?taskRole:morePage);
- panel.dataset.screenKey=screenKey;
- children.forEach((child,i)=>(i<pinCount?pinned:panel).append(child));
- app.replaceChildren(pinned,panel);
- panel.scrollTop=panelScrollPositions.get(screenKey)||0;
+ pinned.className='screen-fixed';panel.className='screen-panel';
+ panel.tabIndex=-1;
+ panel.setAttribute('aria-label',({home:'準備の概要',tasks:'タスク一覧',money:'お金の詳細',guests:'ゲスト管理',more:'その他の項目'})[tab]);
+ const key=getScreenKey();
+ // Do not pin finance or progress cards: they must fit inside one paginated frame.
+ let pinnedCount=tab==='home'?0:tab==='tasks'?1:tab==='guests'?1:tab==='money'?2:morePage?0:1;
+ children.forEach((node,i)=>(i<pinnedCount?pinned:panel).appendChild(node));
+ const nav=document.createElement('div');nav.className='page-navigation';
+ nav.innerHTML='<button class="page-arrow" data-action="pager-prev" type="button" aria-label="前のページ">‹ 前</button>'
+  +'<span class="page-counter" aria-live="off"></span>'
+  +'<button class="page-arrow" data-action="pager-next" type="button" aria-label="次のページ">次 ›</button>';
+ app.replaceChildren(pinned,panel,nav);
+ paginateScreen(panel,nav,key);
 }
+
 function renderSetup(){const step=state.setup===1?2:1;return '<div class="setup"><div class="setup-flower">✿ ♡ ✿</div><h1>Happy Wedding</h1><p>ふたりの特別な一日まで。<br>準備も一緒に楽しもう。</p><div class="card">'+(step===1?'<div class="eyebrow">STEP 1 / 2</div><h2>挙式日はいつ？</h2><form data-form="setup1">'+field('挙式日','date','date',state.date||'',true)+'<button class="btn primary btn-wide">次へ →</button></form>':'<div class="eyebrow">STEP 2 / 2</div><h2>あなたの役割は？</h2><form data-form="setup2">'+selectField('role','あなたの役割',state.roles,state.myRole)+'<button class="btn primary btn-wide">はじめる ♡</button></form>')+'</div><p>あとから設定を変更できます。<br>データは自動でこの端末に保存されます。</p></div>'}
 
 function financeSummary(){
@@ -121,18 +185,24 @@ function upcomingSchedule(limit=3){
 }
 
 function renderHome(){
- const left=distance(state.date),done=state.tasks.filter(t=>t.done).length,total=state.tasks.length;
- const near=state.tasks.filter(x=>!x.done&&x.due).sort((a,b)=>a.due.localeCompare(b.due)).slice(0,1);
- const coming=upcomingSchedule(2);
- let h='<div class="home-event-top"><div class="home-date"><span>WEDDING DAY</span><strong>'+e(state.date.replaceAll('-',' / '))+'</strong></div><div class="home-count"><b>'+Math.abs(left)+'</b><span>'+(left>=0?'DAYS LEFT':'DAYS SINCE')+'</span></div></div>';
- h+=financePanel(true);
- if(state.reminders){const alerts=reminderCandidates();if(alerts.length)h+='<button type="button" class="deadline-banner" data-action="show-deadlines">期限を確認する予定が <b>'+alerts.length+'件</b><span>›</span></button>'}
- h+='<div class="home-actions">'+btn('＋ 予定を登録','new-schedule','','primary')+btn('＋ 必要なもの','new-extra','','light')+btn('資金管理','nav','money','ghost')+'</div>';
- h+='<div class="home-progress"><span>準備の進捗 <b>'+progress(state.tasks)+'%</b></span><span>'+done+' / '+total+' 完了</span><div class="progress"><span style="width:'+progress(state.tasks)+'%"></span></div></div>';
- h+=section('直近の予定',btn('すべて見る →','more','appointments'))+'<div class="home-preview">';
- h+=coming.length?coming.map(x=>'<div class="mini-band"><time>'+dayLabel(x.date)+(x.time?' '+e(x.time):'')+'</time><strong>'+e(x.title)+'</strong>'+btn('編集','edit-schedule',x.id)+'</div>').join(''):'<div class="small muted">打ち合わせ・試着・提出期限などを登録できます。</div>';
- h+='</div>';
- h+=section('次のタスク',btn('タスク一覧 →','nav','tasks'))+'<div class="home-preview">'+(near.length?near.map(x=>taskCard(x,true)).join(''):btn('準備テンプレートを追加','template','','light'))+'</div>';
+ const total=state.tasks.length,done=state.tasks.filter(t=>t.done).length;
+ const nextTasks=state.tasks.filter(t=>!t.done).sort((a,b)=>(a.due||'9999').localeCompare(b.due||'9999')).slice(0,2);
+ const events=upcomingSchedule(3);
+ let h='<div class="home-identity"><div><span class="eyebrow">OUR WEDDING</span><strong>'+e(state.date.replaceAll('-',' / '))+'</strong></div>'
+  +'<span class="home-partners">'+e(state.couple[0])+' & '+e(state.couple[1])+'</span></div>';
+ if(state.reminders){
+  const alerts=reminderCandidates();
+  if(alerts.length)h+='<button type="button" class="deadline-banner" data-action="show-deadlines">確認が必要な期限 <b>'+alerts.length+'件</b><span>›</span></button>';
+ }
+ h+='<div class="home-progress"><span>準備の進捗 <b>'+progress(state.tasks)+'%</b></span><span>'+done+' / '+total+' 件</span><div class="progress"><span style="width:'+progress(state.tasks)+'%"></span></div></div>';
+ h+=section('準備スケジュール',btn('一覧 →','more','appointments'));
+ h+='<div class="home-preview">'+(events.length?events.map(x=>
+ '<div class="mini-band"><time>'+dayLabel(x.date)+(x.time?' '+e(x.time):'')+'</time><strong>'+e(x.title)+'</strong>'+btn('編集','edit-schedule',x.id)+'</div>').join('')
+ :'<div class="empty mini-empty">打ち合わせや衣装合わせの予定を登録できます。</div>')+'</div>';
+ h+='<div class="home-quick">'+btn('＋ 予定を登録','new-schedule','','primary')+btn('＋ タスクを登録','new-task','','light')+'</div>';
+ h+=section('これからのタスク',btn('すべて →','nav','tasks'));
+ h+='<div class="home-preview">'+(nextTasks.length?nextTasks.map(t=>taskCard(t,true)).join(''):btn('準備リストをまとめて登録','template','','light'))+'</div>';
+ h+='<div class="home-footnote">資金や支払いは、下の「お金」タブで管理できます。</div>';
  return h;
 }
 function taskCard(t,compact=false){
@@ -144,7 +214,7 @@ function renderTasks(){
  let h=header('やること',btn('＋ 追加','new-task','','primary'),'役割で分けて、みんなで少しずつ');
  h+='<div class="card"><div class="row between"><b>準備の達成率</b><b>'+progress(state.tasks)+'%</b></div><div class="progress mt"><span style="width:'+progress(state.tasks)+'%"></span></div><div class="caption">'+done+' / '+state.tasks.length+' 件完了</div></div>';
  const tabs=[['all','全員分'],['me','自分の担当'],...state.roles.map(r=>[r.id,r.name])];
- h+='<div class="tabs">'+tabs.map(t=>'<button class="tab '+(taskRole===t[0]?'active':'')+'" data-action="task-filter" data-id="'+e(t[0])+'">'+(role(t[0])?'<span class="role-dot" style="background:'+e(role(t[0]).color)+'"></span> ':'')+e(t[1])+'</button>').join('')+'</div>';
+ h+='<div class="role-select"><label for="role-filter">担当者</label><select id="role-filter" aria-label="表示する担当者">'+tabs.map(t=>'<option value="'+e(t[0])+'" '+(taskRole===t[0]?'selected':'')+'>'+e(t[1])+'</option>').join('')+'</select></div>';
  const list=state.tasks.filter(t=>taskRole==='all'||(taskRole==='me'&&t.role===state.myRole)||t.role===taskRole).sort((a,b)=>Number(a.done)-Number(b.done)||(a.due||'9999').localeCompare(b.due||'9999'));
  h+='<div class="filterbar"><span class="small muted">'+list.length+'件のタスク</span>'+btn('✿ 準備テンプレート','template','','light tiny')+'</div>';
  h+=list.length?'<div class="list">'+list.map(t=>taskCard(t)).join('')+'</div>':empty('まだタスクはありません。<br>右上の追加ボタンかテンプレートから登録してね。');
@@ -163,12 +233,12 @@ function renderMoney(){
  const budget=n(state.budgetTotal),cost=totalForecast(),paid=totalPaid(),gifts=totalGifts();
  if(moneyView==='overview'){
   h+=financePanel();
-  const progressPct=budget?Math.round(cost/budget*100):0;
-  h+='<div class="card"><div class="small muted">費用見込み</div><div class="amount">'+yen(cost)+'</div><div class="small muted">全体予算 '+(budget?yen(budget):'未設定')+'　'+btn('予算を設定','budget-total')+'</div><div class="donut-wrap mt"><div class="donut" style="background:conic-gradient(#d99aa8 0 '+Math.min(progressPct,100)+'%,#edf0e9 '+Math.min(progressPct,100)+'% 100%)"><div class="donut-inner"><b>'+progressPct+'%</b><small>予算使用率</small></div></div><div class="legend"><div><span class="small muted">支払済み</span><div class="strong">'+yen(paid)+'</div></div><div><span class="small muted">見込額の未払い</span><div class="strong">'+yen(Math.max(0,cost-paid))+'</div></div><div><span class="small muted">ご祝儀</span><div class="strong">'+yen(gifts)+'</div></div></div></div>'+(budget&&cost>budget?'<div class="notice">予算より '+yen(cost-budget)+' ほど多くなりそう。項目ごとに確認してみよう。</div>':'')+'</div>';
-  h+='<div class="metric-grid"><div class="metric"><div class="small muted">契約・見積ベース</div><div class="amount" style="font-size:17px;margin-top:9px">'+yen(cost)+'</div></div><div class="metric" style="background:#fff0f2"><div class="small muted">最終持ち出し見込み</div><div class="amount" style="font-size:17px;margin-top:9px;color:#ad7280">'+yen(Math.max(0,cost-gifts))+'</div></div></div>';
-  h+=section('項目ごとの予算',btn('詳しく →','money-view','categories'));
-  h+='<div class="card">'+state.categories.filter(c=>n(c.budget)||forecastCat(c)).slice(0,8).map(c=>barCategory(c)).join('')+(state.categories.every(c=>!n(c.budget)&&!forecastCat(c))?'<div class="small muted">見積・契約額を入力するとグラフが表示されます。</div>':'')+'</div>';
-  h+=section('支払いが近いもの',btn('支払いを管理 →','money-view','payments'))+'<div class="card">'+(state.payments.filter(p=>!p.paid).length?state.payments.filter(p=>!p.paid).sort((a,b)=>(a.due||'9999').localeCompare(b.due||'9999')).slice(0,3).map(p=>'<div class="row between" style="padding:6px 0"><span>'+e(p.title)+'<div class="small muted">'+dayLabel(p.due)+'</div></span><b>'+yen(p.amount)+'</b></div>').join(''):'<span class="small muted">未払い予定はありません。</span>')+'</div>';
+  h+='<div class="money-summary"><div><span>費用見込み</span><strong>'+yen(cost)+'</strong></div>'
+   +'<div><span>支払済み</span><strong>'+yen(paid)+'</strong></div>'
+   +'<div><span>ご祝儀・支援</span><strong>'+yen(gifts)+'</strong></div>'
+   +'<div><span>全体予算</span><strong>'+(budget?yen(budget):'未設定')+'</strong></div></div>';
+  h+='<div class="money-quick">'+btn('予算を設定','budget-total','','light')+btn('費用の内訳','money-view','categories','ghost')+btn('支払い予定','money-view','payments','ghost')+'</div>';
+  if(budget&&cost>budget)h+='<div class="notice">予算より '+yen(cost-budget)+' 多い見込みです。内訳を確認してください。</div>';
  }
  if(moneyView==='extras'){
   h+='<div class="page-actions mb">'+btn('＋ 必要なものを登録','new-extra','','primary')+'</div>';
@@ -478,6 +548,7 @@ function remind(){
 async function handleAction(target){
  const action=target.dataset.action,uid=target.dataset.id;
  if(!action)return;
+ if(action==='pager-prev'||action==='pager-next'){if(activePager)presentPage(activePager.index+(action==='pager-next'?1:-1));return}
  if(action==='nav'){chooseTab(uid);return}
  if(action==='more'){tab='more';morePage=uid;render();window.scrollTo(0,0);return}
  if(action==='close-modal'){dialog.close();return}
@@ -535,6 +606,7 @@ document.addEventListener('click',ev=>{
 document.addEventListener('change',async ev=>{
  const t=ev.target;
  if(t.matches('input[data-action^="toggle-"]')){handleAction(t);return}
+ if(t.id==='role-filter'){taskRole=t.value;pageByKey.clear();render();return}
  if(t.id==='import-file'&&t.files?.[0]){
   if(syncEnabled()){toast('復元する前に共有接続を解除してください');return}
   try{const obj=JSON.parse((await t.files[0].text()).replace(/^\uFEFF/,''));if(!obj||!Array.isArray(obj.tasks)||!Array.isArray(obj.roles)||!Array.isArray(obj.guests)||!Array.isArray(obj.categories))throw Error('バックアップ形式が不正です');if(!confirm('現在の端末データをバックアップ内容で置き換えますか？'))return;state={...defaults(),...obj};save();render();toast('データを復元しました')}catch(err){toast('読み込みに失敗: '+err.message)}

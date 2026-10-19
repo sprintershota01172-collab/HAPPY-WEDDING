@@ -602,3 +602,27 @@ dialog::backdrop{background:rgba(20,35,26,.40)!important;backdrop-filter:none!im
 .calendar-cell{height:36px!important;min-height:36px!important}
 .calendar-grid{gap:3px!important}
 .dialog-navigation{margin-top:auto}
+
+
+/* 2026-10-20 r5: six bottom tabs and separate honeymoon overview */
+.bottom-nav{gap:1px!important;padding-left:3px!important;padding-right:3px!important}
+.bottom-nav button{flex:1 1 0!important;min-width:0!important;width:0!important;gap:2px!important;font-size:clamp(9px,2.5vw,10px)!important;font-weight:640!important;padding:2px 0!important;white-space:nowrap}
+.bottom-nav button .nav-icon{width:22px!important;height:23px!important}
+.bottom-nav button .nav-icon svg{width:20px!important;height:20px!important}
+.bottom-nav button.active{font-weight:750!important}
+.finance-amount-edit{appearance:none;border:0;padding:1px 0;background:transparent;display:flex;align-items:baseline;justify-content:flex-start;gap:9px;color:inherit;text-align:left;min-width:0;width:100%;cursor:pointer;-webkit-tap-highlight-color:transparent}
+.finance-amount-edit strong{min-width:0;overflow-wrap:anywhere}
+.finance-amount-edit small{font-family:-apple-system,BlinkMacSystemFont,sans-serif;color:#7e9987;background:#e2ede4;border-radius:8px;flex:0 0 auto;padding:5px 7px;font-size:12px;font-weight:650}
+.finance-amount-edit:focus-visible{outline:2px solid #789f88;outline-offset:4px;border-radius:6px}
+.honeymoon-panel{display:flex;flex-direction:column;gap:12px;background:linear-gradient(130deg,#f2f3ed,#faf9f4);border:1px solid #e1e6dd;border-radius:17px;padding:14px;box-shadow:0 2px 9px rgba(44,60,52,.025)}
+.honeymoon-label{display:flex;justify-content:space-between;align-items:center;gap:10px}
+.honeymoon-label>span{font-size:10px;color:#75887c;font-weight:720;letter-spacing:.12em}
+.honeymoon-cost{display:flex;flex-direction:column;gap:5px}
+.honeymoon-cost>span{font-size:12px;font-weight:750;color:#597064}
+.honeymoon-cost strong{font-family:-apple-system,BlinkMacSystemFont,"Helvetica Neue",Arial,sans-serif;font-size:clamp(26px,7.8vw,36px);font-weight:690;letter-spacing:-.016em;font-variant-numeric:tabular-nums;color:#365849;line-height:1.2}
+.honeymoon-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:9px}
+.honeymoon-grid>div{display:flex;flex-direction:column;min-width:0;gap:5px;border:1px solid #e5e9e2;border-radius:12px;background:white;padding:11px}
+.honeymoon-grid span{font-size:11px;color:#76877c;font-weight:700}
+.honeymoon-grid strong{font-family:-apple-system,BlinkMacSystemFont,"Helvetica Neue",Arial,sans-serif;font-size:clamp(17px,5vw,23px);font-weight:680;letter-spacing:-.012em;font-variant-numeric:tabular-nums;color:#3a604e;overflow-wrap:anywhere}
+.honeymoon-panel .caption{margin:0;font-size:10px;line-height:1.55;color:#76847a}
+@media(max-width:350px){.bottom-nav button{font-size:9px!important}.bottom-nav button .nav-icon svg{width:19px!important;height:19px!important}}

@@ -332,7 +332,7 @@ function modalEdit(type,uid=''){
    +field('もらったものの金額・目安（円）','value','number',x.value||0,false,'min="0"')+'</div>'
    +'<div class="guest-step-panel" data-step="returned" hidden>'+field('何を返した？','returnItem','text',x.returnItem||'')
    +field('お返し金額（円）','returnValue','number',x.returnValue||0,false,'min="0"')
-   +field('お返し日','returnDate','date',x.returnDate||'')
+   +field('お返しの予定日','returnDue','date',x.returnDue||'')+field('実際のお返し日','returnDate','date',x.returnDate||'')
    +checkField('お返し済み','returned',x.returned)+area('メモ','note',x.note||'')+'</div>';
  }else if(type==='thanks'){
   title=uid?'お礼を編集':'お礼を追加';b=field('お礼をする相手','recipient','text',x.recipient,true)+choices('種類','type',[['内祝い','内祝い'],['お礼状','お礼状'],['引出物の発送','引出物の発送'],['その他','その他']],x.type||'内祝い')+area('品物・発送・メモ','note',x.note||'')+checkField('完了','done',x.done);
@@ -452,7 +452,8 @@ function reminderCandidates(){
   ...state.tasks.filter(x=>!x.done&&x.due).map(x=>({id:'task-'+x.id,title:x.title,date:x.due,lead,kind:'タスク'})),
   ...state.payments.filter(x=>!x.paid&&x.due).map(x=>({id:'payment-'+x.id,title:x.title,date:x.due,lead,kind:'支払い'})),
   ...state.schedules.filter(x=>!x.done&&x.date).map(x=>({id:'schedule-'+x.id,title:x.title,date:x.date,lead:x.remindDays===''||x.remindDays==null?lead:Math.max(0,n(x.remindDays)),kind:'予定'})),
-  ...state.extras.filter(x=>!x.paid&&x.due).map(x=>({id:'extra-'+x.id,title:x.title,date:x.due,lead,kind:'必要なもの'}))
+  ...state.extras.filter(x=>!x.paid&&x.due).map(x=>({id:'extra-'+x.id,title:x.title,date:x.due,lead,kind:'必要なもの'})),
+  ...state.presents.filter(x=>!x.returned&&x.returnDue).map(x=>({id:'present-'+x.id,title:x.sender+'さんへのお返し',date:x.returnDue,lead,kind:'お返し'}))
  ];
  return all.filter(x=>distance(x.date)<=x.lead).sort((a,b)=>a.date.localeCompare(b.date));
 }

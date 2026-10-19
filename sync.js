@@ -48,7 +48,7 @@ export async function startSync(config,room,onRemote,onStatus,onReady){
    const entry=change.doc.data();
    if(!entry.collection||!entry.id)continue;
    const dirty=pending.some(x=>x.room===room&&x.collection===entry.collection&&x.id===entry.id);
-   if(!dirty)onRemote(entry);
+   if(!dirty)onRemote(entry,{initial:!current.ready,kind:change.type});
   }
   if(!current.ready){current.ready=true;onReady(snapshot.empty);}
   onStatus(navigator.onLine?'synced':'offline');

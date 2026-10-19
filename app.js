@@ -191,7 +191,30 @@ function organizeScreen(){
  paginateScreen(panel,nav,key);
 }
 
-function renderSetup(){const step=state.setup===1?2:1;return '<div class="setup"><div class="setup-flower">✿ ♡ ✿</div><h1>Happy Wedding</h1><p>ふたりの特別な一日まで。<br>準備も一緒に楽しもう。</p><div class="card">'+(step===1?'<div class="eyebrow">STEP 1 / 2</div><h2>挙式日はいつ？</h2><form data-form="setup1">'+field('挙式日','date','date',state.date||'',true)+'<button class="btn primary btn-wide">次へ →</button></form>':'<div class="eyebrow">STEP 2 / 2</div><h2>あなたの役割は？</h2><form data-form="setup2">'+selectField('role','あなたの役割',state.roles,state.myRole)+'<button class="btn primary btn-wide">はじめる ♡</button></form>')+'</div><p>あとから設定を変更できます。<br>データは自動でこの端末に保存されます。</p></div>'}
+
+function renderSetupDate(){
+ const current=new Date().getFullYear();
+ const years=Array.from({length:27},(_,i)=>current-3+i);
+ const choices=(values,placeholder,toLabel)=>'<option value="">'+placeholder+'</option>'
+  +values.map(v=>'<option value="'+v+'">'+toLabel(v)+'</option>').join('');
+ return '<div class="setup-date-field"><span class="setup-date-label">挙式日</span>'
+  +'<div class="setup-date-grid">'
+  +'<select name="weddingYear" aria-label="挙式年" required>'+choices(years,'年を選ぶ',v=>v+'年')+'</select>'
+  +'<select name="weddingMonth" aria-label="挙式月" required>'+choices(Array.from({length:12},(_,i)=>i+1),'月',v=>v+'月')+'</select>'
+  +'<select name="weddingDay" aria-label="挙式日" required>'+choices(Array.from({length:31},(_,i)=>i+1),'日',v=>v+'日')+'</select>'
+  +'</div></div>';
+}
+function updateSetupDays(){
+ const form=document.querySelector('form[data-form="setup1"]');
+ if(!form)return;
+ const y=Number(form.elements.weddingYear.value),m=Number(form.elements.weddingMonth.value);
+ const el=form.elements.weddingDay,previous=el.value;
+ const maxDay=y&&m?new Date(y,m,0).getDate():31;
+ el.innerHTML='<option value="">日</option>'+Array.from({length:maxDay},(_,i)=>'<option value="'+(i+1)+'">'+(i+1)+'日</option>').join('');
+ if(previous&&Number(previous)<=maxDay)el.value=previous;
+}
+
+function renderSetup(){const step=state.setup===1?2:1;return '<div class="setup"><div class="setup-flower">✿ ♡ ✿</div><h1>Happy Wedding</h1><p>ふたりの特別な一日まで。<br>準備も一緒に楽しもう。</p><div class="card">'+(step===1?'<div class="eyebrow">STEP 1 / 2</div><h2>挙式日はいつ？</h2><form data-form="setup1" novalidate>'+renderSetupDate()+'<button class="btn primary btn-wide">次へ →</button></form>':'<div class="eyebrow">STEP 2 / 2</div><h2>あなたの役割は？</h2><form data-form="setup2">'+selectField('role','あなたの役割',state.roles,state.myRole)+'<button class="btn primary btn-wide">はじめる ♡</button></form>')+'</div><p>あとから設定を変更できます。<br>データは自動でこの端末に保存されます。</p></div>'}
 
 
 function honeymoonCategory(){return state.categories.find(c=>c.name==='新婚旅行'||c.id==='hw-honeymoon')||null}
@@ -393,7 +416,7 @@ function renderSubpage(){
  return moreTitle('準備');
 }
 function renderSettings(){
- return moreTitle('基本設定')+'<div class="caption">Version 20261020r7</div><div class="card"><form data-form="settings">'+field('挙式日','date','date',state.date,true)+field('新郎の呼び名','couple0','text',state.couple[0])+field('新婦の呼び名','couple1','text',state.couple[1])+'<button class="btn primary btn-wide">設定を保存</button></form></div><div class="card"><h2>リマインド</h2><p class="small muted">アプリを開いたとき・戻ったときに期限をお知らせします。</p>'+btn(state.reminders?'通知をオフにする':'通知をオンにする','notifications','','light')+'<form data-form="reminder-settings"><div class="field"><label>何日前からお知らせする？</label><select name="reminderDays">'+[[0,'当日'],[1,'1日前'],[3,'3日前'],[7,'7日前'],[14,'14日前']].map(v=>'<option value="'+v[0]+'" '+(n(state.reminderDays)===v[0]?'selected':'')+'>'+v[1]+'</option>').join('')+'</select></div><button class="btn light btn-wide" type="submit">通知タイミングを保存</button></form><p class="caption">パートナーの変更は共有接続中にリアルタイム通知。閉じている間は配信設定が必要です。</p>'+btn('パートナー通知を許可','partner-push','','light')+'</div><div class="card"><h2>保存について</h2><p class="small muted">端末に自動保存します。iPhoneの「ホーム画面に追加」前後で、ブラウザ内の保存領域が別になる場合があります。大切なデータはバックアップを保存してください。</p>'+btn('バックアップへ','more','backup')+'</div>';
+ return moreTitle('基本設定')+'<div class="caption">Version 20261020r8</div><div class="card"><form data-form="settings">'+field('挙式日','date','date',state.date,true)+field('新郎の呼び名','couple0','text',state.couple[0])+field('新婦の呼び名','couple1','text',state.couple[1])+'<button class="btn primary btn-wide">設定を保存</button></form></div><div class="card"><h2>リマインド</h2><p class="small muted">アプリを開いたとき・戻ったときに期限をお知らせします。</p>'+btn(state.reminders?'通知をオフにする':'通知をオンにする','notifications','','light')+'<form data-form="reminder-settings"><div class="field"><label>何日前からお知らせする？</label><select name="reminderDays">'+[[0,'当日'],[1,'1日前'],[3,'3日前'],[7,'7日前'],[14,'14日前']].map(v=>'<option value="'+v[0]+'" '+(n(state.reminderDays)===v[0]?'selected':'')+'>'+v[1]+'</option>').join('')+'</select></div><button class="btn light btn-wide" type="submit">通知タイミングを保存</button></form><p class="caption">パートナーの変更は共有接続中にリアルタイム通知。閉じている間は配信設定が必要です。</p>'+btn('パートナー通知を許可','partner-push','','light')+'</div><div class="card"><h2>保存について</h2><p class="small muted">端末に自動保存します。iPhoneの「ホーム画面に追加」前後で、ブラウザ内の保存領域が別になる場合があります。大切なデータはバックアップを保存してください。</p>'+btn('バックアップへ','more','backup')+'</div>';
 }
 function renderBackup(){
  return moreTitle('バックアップと書き出し')+'<div class="card"><h2>JSONバックアップ</h2><p class="small muted">ゲスト、タスク、予算、写真などを一括保存・復元します。</p><div class="page-actions">'+btn('バックアップを保存','export-json','','primary')+btn('バックアップを読み込む','import-json')+'</div><input id="import-file" type="file" accept=".json,application/json" hidden></div><div class="card"><h2>CSV書き出し</h2><p class="small muted">Excelで使える形式で項目別に保存します。</p><div class="field"><select id="csv-section">'+ARRAYS.map(k=>'<option value="'+k+'">'+e(({tasks:'タスク',guests:'ゲスト',payments:'支払い',categories:'予算項目',gifts:'ご祝儀',roles:'役割',tables:'卓',timeline:'当日進行',vendors:'業者',ideas:'アイデア',items:'持ち物',thanks:'お礼',comments:'コメント'})[k])+'</option>').join('')+'</select></div>'+btn('CSVを保存','export-csv','','light')+'</div><p class="caption">JSONファイルには個人情報が含まれるため、第三者には渡さず安全に保管してください。</p>';
@@ -608,7 +631,16 @@ function values(form){const f=new FormData(form),v={};for(const [k,val] of f.ent
 function flBool(f,k){return f.has(k)}
 async function submit(form){
  const type=form.dataset.form,uid=form.dataset.id||'',f=new FormData(form),v=values(form);
- if(type==='setup1'){if(!v.date){toast('挙式日を選択してください');return}state.date=v.date;state.setup=1;save();render();return}
+ if(type==='setup1'){
+  const y=Number(v.weddingYear),m=Number(v.weddingMonth),day=Number(v.weddingDay);
+  if(!y||!m||!day){toast('挙式日の年・月・日をすべて選択してください');return}
+  const date=new Date(y,m-1,day);
+  if(date.getFullYear()!==y||date.getMonth()!==m-1||date.getDate()!==day){
+   toast('正しい挙式日を選択してください');return
+  }
+  state.date=String(y)+'-'+String(m).padStart(2,'0')+'-'+String(day).padStart(2,'0');
+  state.setup=1;save();render();return;
+ }
  if(type==='setup2'){state.myRole=v.role;state.setup=2;save();render();return}
  if(type==='reminder-settings'){setSetting('reminderDays',Math.max(0,Math.min(30,n(v.reminderDays))));toast('リマインド日数を保存しました');return}
  if(type==='settings'){state.date=v.date;state.couple=[v.couple0.trim()||'新郎',v.couple1.trim()||'新婦'];save();if(syncEnabled())queueChange('settings','main',settingsRemote());announcePartnerChange('settings');toast('基本設定を保存しました');render();return}
@@ -797,6 +829,7 @@ document.addEventListener('click',ev=>{
 });
 document.addEventListener('change',async ev=>{
  const t=ev.target;
+ if(t.matches('form[data-form="setup1"] [name="weddingYear"],form[data-form="setup1"] [name="weddingMonth"]')){updateSetupDays();return}
  if(t.matches('input[data-action^="toggle-"]')){handleAction(t);return}
  if(t.id==='role-filter'){taskRole=t.value;pageByKey.clear();render();return}
  if(t.id==='import-file'&&t.files?.[0]){

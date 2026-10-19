@@ -5,7 +5,7 @@ let deviceId=localStorage.getItem(DEVICE_KEY);
 if(!deviceId){deviceId=crypto.randomUUID();localStorage.setItem(DEVICE_KEY,deviceId)}
 let hooks={getRoom:()=>'',getRole:()=>'',toast:()=>{},modal:()=>{}};
 const cache=new Map();
-const label={tasks:'やること',guests:'ゲスト',payments:'支払い',categories:'予算',gifts:'ご祝儀',tables:'席次表',timeline:'当日の進行',vendors:'打ち合わせ',ideas:'アイデア',items:'持ち物',thanks:'お礼',roles:'役割',comments:'ひとこと',settings:'基本設定'};
+const label={tasks:'やること',guests:'ゲスト',payments:'支払い',categories:'予算',gifts:'ご祝儀',tables:'席次表',timeline:'当日の進行',vendors:'打ち合わせ',ideas:'アイデア',items:'持ち物',thanks:'お礼',roles:'役割',comments:'ひとこと',settings:'基本設定',schedules:'準備予定',extras:'必要なもの',presents:'お祝い・お返し'};
 const feedKey=room=>'hw_change_feed_'+room;
 const seenKey=room=>'hw_feed_seen_'+room+'_'+deviceId;
 const currentRoom=()=>hooks.getRoom()||'';

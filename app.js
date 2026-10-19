@@ -229,7 +229,7 @@ function renderMore(){
 
 function renderAppointments(){
  const list=state.schedules.slice().sort((a,b)=>(a.date||'9999').localeCompare(b.date||'9999')||(a.time||'').localeCompare(b.time||''));
- return moreTitle('準備スケジュール')+'<div class="section-action">'+btn('＋ 予定を追加','new-schedule','','primary')+'</div>'
+ return moreTitle('準備スケジュール')+'<div class="section-action">'+btn('＋ 予定を追加','new-schedule','','primary')+btn('カレンダー用保存','calendar-export','','ghost')+'</div>'
  +'<div class="list compact-list">'+(list.length?list.map(x=>'<div class="item '+(x.done?'done':'')+'"><input type="checkbox" class="check" data-action="toggle-schedule" data-id="'+e(x.id)+'" '+(x.done?'checked':'')+' aria-label="予定を完了"><div class="content"><b class="item-title">'+e(x.title)+'</b><div class="item-sub">'+dayLabel(x.date)+(x.time?' '+e(x.time):'')+'　'+e(nameRole(x.role))+'</div>'+(x.memo?'<div class="item-sub">'+e(x.memo)+'</div>':'')+'</div>'+btn('編集','edit-schedule',x.id)+'</div>').join(''):empty('打合せ・衣装合わせ・提出期限などを登録できます。'))+'</div>'
  +'<p class="caption">予定は期限のお知らせにも反映されます。</p>';
 }
@@ -417,6 +417,25 @@ function templateTasks(){
  if(added)announcePartnerChange('tasks','一括追加');
  render();toast(added?added+'件の準備タスクを追加しました':'テンプレートはすべて登録済みです');
 }
+
+function exportWeddingCalendar(){
+ const escapeICS=v=>String(v??'').replaceAll('\\','\\\\').replaceAll('\n','\\n').replaceAll(',','\\,').replaceAll(';','\\;');
+ const evs=state.schedules.filter(x=>x.date);
+ if(!evs.length){toast('先に予定を登録してください');return}
+ const stamp=new Date().toISOString().replaceAll(/[-:]/g,'').replace(/\.\d{3}Z$/,'Z');
+ const lines=['BEGIN:VCALENDAR','VERSION:2.0','PRODID:-//HAPPY WEDDING//Preparation//JA','CALSCALE:GREGORIAN','METHOD:PUBLISH'];
+ for(const x of evs){
+  const ymd=x.date.replaceAll('-','');
+  if(!/^\d{8}$/.test(ymd))continue;
+  const lead=x.remindDays===''||x.remindDays==null?Math.max(0,n(state.reminderDays??3)):Math.max(0,n(x.remindDays));
+  const dateSpec=x.time&&/^\d{2}:\d{2}$/.test(x.time)?'DTSTART;TZID=Asia/Tokyo:'+ymd+'T'+x.time.replace(':','')+'00':'DTSTART;VALUE=DATE:'+ymd;
+  lines.push('BEGIN:VEVENT','UID:'+escapeICS(x.id)+'@happy-wedding.local','DTSTAMP:'+stamp,dateSpec,'SUMMARY:'+escapeICS(x.title),'DESCRIPTION:'+escapeICS(x.memo||''),'BEGIN:VALARM','ACTION:DISPLAY','DESCRIPTION:'+escapeICS(x.title)+' のリマインド','TRIGGER:-P'+lead+'D','END:VALARM','END:VEVENT');
+ }
+ lines.push('END:VCALENDAR');
+ download('happy-wedding-schedule-'+today()+'.ics',lines.join('\r\n'),'text/calendar;charset=utf-8');
+ toast('カレンダー用ファイルを書き出しました。予定変更時は再度登録が必要です');
+}
+
 function download(name,text,mime){
  const blob=new Blob([mime.includes('csv')?'\ufeff':'',text],{type:mime});const u=URL.createObjectURL(blob),a=document.createElement('a');a.href=u;a.download=name;document.body.append(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(u),30000)
 }
@@ -466,6 +485,7 @@ async function handleAction(target){
  if(action==='pay-clear'){paymentDateSelected='';render();return}
  if(action==='guest-view'){guestView=uid;render();return}
  if(action==='template'){templateTasks();return}
+ if(action==='calendar-export'){exportWeddingCalendar();return}
  if(action==='money-add'){modal('何を追加する？','<div class="stack">'+btn('必要なものを追加','new-extra','','light')+btn('予算項目を追加','new-category','','light')+btn('支払い予定を追加','new-payment','','light')+btn('ご祝儀を追加','new-gift','','light')+'</div>');return}
  if(action==='edit-savings'){modal('現在の貯金額を登録',field('結婚式に使える現在の貯金（円）','savings','number',state.savings??'',true,'min="0"')+'<p class="field-hint">手元の貯金のうち、結婚式に充当できる額を登録してください。ご祝儀や支援金を含めた場合は二重計上しません。</p>','savings');return}
  if(action==='budget-total'){modal('全体予算',field('予算総額（円）','budget','number',state.budgetTotal,true,'min="0"'),'budget-total');return}

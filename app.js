@@ -67,7 +67,7 @@ function progress(items){return items.length?Math.round(items.filter(x=>x.done).
 function formatPriority(x){return x==='high'?badge('優先','danger'):x==='low'?badge('ゆっくり','mint'):''}
 function overdue(x){return x.due&&!x.done&&distance(x.due)<0}
 function dueSoon(x){return x.due&&!x.done&&distance(x.due)>=0&&distance(x.due)<=7}
-function render(){document.querySelectorAll('.bottom-nav button').forEach(b=>b.classList.toggle('active',b.dataset.tab===tab));$('#connection').title=syncEnabled()?'共有コード設定済み':'端末に保存';if(!state.setup){app.innerHTML=renderSetup();return}
+function render(){const bottomNav=document.querySelector('.bottom-nav');if(bottomNav)bottomNav.hidden=!state.setup;document.querySelectorAll('.bottom-nav button').forEach(b=>b.classList.toggle('active',b.dataset.tab===tab));$('#connection').title=syncEnabled()?'共有コード設定済み':'端末に保存';if(!state.setup){app.innerHTML=renderSetup();return}
  app.innerHTML=tab==='home'?renderHome():tab==='tasks'?renderTasks():tab==='money'?renderMoney():tab==='guests'?renderGuests():renderMore();
 }
 function renderSetup(){const step=state.setup===1?2:1;return '<div class="setup"><div class="setup-flower">✿ ♡ ✿</div><h1>Happy Wedding</h1><p>ふたりの特別な一日まで。<br>準備も一緒に楽しもう。</p><div class="card">'+(step===1?'<div class="eyebrow">STEP 1 / 2</div><h2>挙式日はいつ？</h2><form data-form="setup1">'+field('挙式日','date','date',state.date,true)+'<button class="btn primary btn-wide">次へ →</button></form>':'<div class="eyebrow">STEP 2 / 2</div><h2>あなたの役割は？</h2><form data-form="setup2">'+selectField('role','あなたの役割',state.roles,state.myRole)+'<button class="btn primary btn-wide">はじめる ♡</button></form>')+'</div><p>あとから設定を変更できます。<br>データは自動でこの端末に保存されます。</p></div>'}

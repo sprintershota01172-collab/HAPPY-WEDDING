@@ -11,8 +11,8 @@ const DEFAULT_ROLES=[
  {id:'host',name:'司会・友人幹事',color:COLORS[4]},{id:'planner',name:'プランナー',color:COLORS[5]}
 ];
 const DEFAULT_CATEGORIES=['会場','衣装','写真・映像','料理','装花','引出物','ペーパーアイテム','演出','二次会','新婚旅行'].map((name,i)=>({id:'c'+i,name,icon:['⌂','♕','▧','♨','✿','🎁','✉','♫','♡','✈'][i],budget:0,estimate:0,contract:0,manualPaid:0,color:COLORS[i%COLORS.length]}));
-const ARRAYS=['roles','categories','tasks','payments','gifts','guests','tables','timeline','vendors','ideas','items','thanks','comments','schedules','extras'];
-function defaults(){return {version:1,setup:0,date:'',myRole:'groom',couple:['新郎','新婦'],budgetTotal:0,savings:null,reminders:false,reminderDays:3,roles:DEFAULT_ROLES,categories:DEFAULT_CATEGORIES,tasks:[],payments:[],gifts:[],guests:[],tables:[],timeline:[],vendors:[],ideas:[],items:[],thanks:[],comments:[],schedules:[],extras:[]}}
+const ARRAYS=['roles','categories','tasks','payments','gifts','guests','tables','timeline','vendors','ideas','items','thanks','comments','schedules','extras','presents'];
+function defaults(){return {version:1,setup:0,date:'',myRole:'groom',couple:['新郎','新婦'],budgetTotal:0,savings:null,reminders:false,reminderDays:3,roles:DEFAULT_ROLES,categories:DEFAULT_CATEGORIES,tasks:[],payments:[],gifts:[],guests:[],tables:[],timeline:[],vendors:[],ideas:[],items:[],thanks:[],comments:[],schedules:[],extras:[],presents:[]}}
 function load(){try{const v=JSON.parse(localStorage.getItem(KEY)||'null');if(!v)return defaults();const d=defaults();return {...d,...v,...Object.fromEntries(ARRAYS.map(k=>[k,Array.isArray(v[k])?v[k]:d[k]]))}}catch(e){return defaults()}}
 let state=load(), tab='home', taskRole='all', guestView='list', moneyView='overview', paymentMonth='',paymentDateSelected='', morePage='',selectedGuest='', cloud=null;
 const app=document.getElementById('main'),dialog=document.getElementById('modal'),modalContent=document.getElementById('modal-content'),toastEl=document.getElementById('toast');
@@ -125,7 +125,7 @@ function renderHome(){
  const coming=upcomingSchedule(4);
  let h='<div class="home-event-top"><div class="home-date"><span>WEDDING DAY</span><strong>'+e(state.date.replaceAll('-',' / '))+'</strong></div><div class="home-count"><b>'+Math.abs(left)+'</b><span>'+(left>=0?'DAYS LEFT':'DAYS SINCE')+'</span></div></div>';
  h+=financePanel(true);
- h+='<div class="home-actions">'+btn('＋ 予定を登録','new-schedule','','primary')+btn('＋ 必要なもの','new-extra','','light')+btn('資金管理','nav','money','','ghost')+'</div>';
+ h+='<div class="home-actions">'+btn('＋ 予定を登録','new-schedule','','primary')+btn('＋ 必要なもの','new-extra','','light')+btn('資金管理','nav','money','ghost')+'</div>';
  h+='<div class="home-progress"><span>準備の進捗 <b>'+progress(state.tasks)+'%</b></span><span>'+done+' / '+total+' 完了</span><div class="progress"><span style="width:'+progress(state.tasks)+'%"></span></div></div>';
  h+=section('直近の予定',btn('すべて見る →','more','appointments'))+'<div class="home-preview">';
  h+=coming.length?coming.map(x=>'<div class="mini-band"><time>'+dayLabel(x.date)+(x.time?' '+e(x.time):'')+'</time><strong>'+e(x.title)+'</strong>'+btn('編集','edit-schedule',x.id)+'</div>').join(''):'<div class="small muted">打ち合わせ・試着・提出期限などを登録できます。</div>';
@@ -221,10 +221,27 @@ function guestChip(g){return '<button class="seat-chip" draggable="true" data-gu
 function moreTitle(label){return '<div class="row mb">'+btn('← 戻る','more','','ghost tiny')+'<h1 style="font-size:20px;margin:0">'+e(label)+'</h1></div>'}
 function renderMore(){
  if(morePage)return renderSubpage();
- const entries=[['schedule','当日のタイムライン','進行やスピーチ担当を整理','◷'],['vendors','業者・打ち合わせ','連絡先と決定事項を記録','⌂'],['ideas','アイデアボード','好きな写真やURLを保存','✿'],['packing','持ち物','前日・当日のチェック','▣'],['thanks','お礼リスト','お礼状・内祝い・発送','♡'],['roles','役割の管理','名前・カラー・自分の担当を編集','♧'],['sync','ふたりで共有','リアルタイム同期の設定','⇄'],['backup','バックアップ','JSON保存・読み込み・CSV書出し','⇩'],['settings','基本設定','挙式日・ふたりの名前・通知','⚙']];
+ const entries=[['appointments','準備スケジュール','打合せ・試着・期限を登録','◷'],['presents','お祝い・お返し','物・商品券・お礼の記録','♡'],['schedule','当日のタイムライン','進行やスピーチ担当を整理','◷'],['vendors','業者・打ち合わせ','連絡先と決定事項を記録','⌂'],['ideas','アイデアボード','好きな写真やURLを保存','✿'],['packing','持ち物','前日・当日のチェック','▣'],['thanks','お礼リスト','お礼状・内祝い・発送','♡'],['roles','役割の管理','名前・カラー・自分の担当を編集','♧'],['sync','ふたりで共有','リアルタイム同期の設定','⇄'],['backup','バックアップ','JSON保存・読み込み・CSV書出し','⇩'],['settings','基本設定','挙式日・ふたりの名前・通知','⚙']];
  return header('その他','','準備の記録や設定も、ここにまとめて')+'<div class="card flush">'+entries.map((v,i)=>'<button data-action="more" data-id="'+v[0]+'" style="display:flex;align-items:center;width:100%;gap:12px;border:0;background:transparent;padding:15px;border-bottom:'+(i===entries.length-1?'0':'1px solid #f2e9e5')+';text-align:left"><span style="font-size:22px;color:#c59499;width:29px;text-align:center">'+v[3]+'</span><span class="grow"><b style="font-size:13px">'+v[1]+'</b><div class="small muted" style="margin-top:3px">'+v[2]+'</div></span><span class="muted">›</span></button>').join('')+'</div>';
 }
+
+function renderAppointments(){
+ const list=state.schedules.slice().sort((a,b)=>(a.date||'9999').localeCompare(b.date||'9999')||(a.time||'').localeCompare(b.time||''));
+ return moreTitle('準備スケジュール')+'<div class="section-action">'+btn('＋ 予定を追加','new-schedule','','primary')+'</div>'
+ +'<div class="list compact-list">'+(list.length?list.map(x=>'<div class="item '+(x.done?'done':'')+'"><input type="checkbox" class="check" data-action="toggle-schedule" data-id="'+e(x.id)+'" '+(x.done?'checked':'')+' aria-label="予定を完了"><div class="content"><b class="item-title">'+e(x.title)+'</b><div class="item-sub">'+dayLabel(x.date)+(x.time?' '+e(x.time):'')+'　'+e(nameRole(x.role))+'</div>'+(x.memo?'<div class="item-sub">'+e(x.memo)+'</div>':'')+'</div>'+btn('編集','edit-schedule',x.id)+'</div>').join(''):empty('打合せ・衣装合わせ・提出期限などを登録できます。'))+'</div>'
+ +'<p class="caption">予定は期限のお知らせにも反映されます。</p>';
+}
+function renderPresents(){
+ const all=state.presents,returned=all.filter(x=>x.returned).length;
+ return moreTitle('お祝い・お返し')+'<div class="section-action">'+btn('＋ お祝いを記録','new-present','','primary')+'</div>'
+ +'<div class="compact-summary">登録 <b>'+all.length+'件</b><span>お返し済 <b>'+returned+'件</b></span><span>未対応 <b>'+(all.length-returned)+'件</b></span></div>'
+ +'<div class="list compact-list">'+(all.length?all.map(x=>'<div class="item"><div class="content"><b class="item-title">'+e(x.sender)+'</b><div class="item-sub">'+e(x.kind||'品物')+' · '+e(x.received||'内容未登録')+(n(x.value)?' · '+yen(x.value):'')+'</div><div class="item-sub">'+(x.returned?'お返し済':'お返し未完了')+'：'+e(x.returnItem||'未登録')+(n(x.returnValue)?' · '+yen(x.returnValue):'')+'</div></div>'+btn('編集','edit-present',x.id)+'</div>').join(''):empty('物・商品券・現金などのお祝いと、お返しを記録できます。'))+'</div>'
+ +'<p class="caption">ここで登録する受領額は予算の収入に自動加算しません。ご祝儀と重複させないためです。</p>';
+}
+
 function renderSubpage(){
+ if(morePage==='appointments')return renderAppointments();
+ if(morePage==='presents')return renderPresents();
  if(morePage==='roles'){let h=moreTitle('役割の管理')+'<p class="page-desc">自由に追加・編集。タスクの担当に反映されます。</p>'+btn('＋ 役割追加','new-role','','primary');h+='<div class="list mt">'+state.roles.map(r=>'<div class="item"><span class="role-dot" style="width:23px;height:23px;background:'+e(r.color)+'"></span><div class="content"><b>'+e(r.name)+'</b> '+(r.id===state.myRole?badge('自分の担当','mint'):'')+'</div>'+btn('自分','set-my-role',r.id)+btn('編集','edit-role',r.id)+'</div>').join('')+'</div>';return h}
  if(morePage==='schedule')return moreTitle('当日のタイムライン')+btn('＋ 進行を追加','new-timeline','','primary')+'<div class="card mt"><div class="timeline">'+state.timeline.slice().sort((a,b)=>a.time.localeCompare(b.time)).map(x=>'<div class="timeline-item"><div><time>'+e(x.time)+'</time><b>'+e(x.title)+'</b></div><div class="small muted">'+e(nameRole(x.role))+' · '+e(x.memo||'')+'</div>'+btn('編集','edit-timeline',x.id)+'</div>').join('')+'</div>'+(state.timeline.length?'':empty('挙式、披露宴、スピーチなどを追加しましょう。'))+'</div>';
  if(morePage==='vendors')return moreTitle('業者・打ち合わせ')+btn('＋ 業者を登録','new-vendor','','primary')+'<div class="list mt">'+(state.vendors.length?state.vendors.map(v=>'<div class="item"><div class="content"><b>'+e(v.company)+'</b><div class="item-sub">'+e(v.contact||'')+' · '+e(v.phone||'')+'</div><div class="item-sub">'+e(v.decisions||'')+'</div></div>'+btn('編集','edit-vendor',v.id)+'</div>').join(''):empty('業者の連絡先と打ち合わせ履歴を保存できます。'))+'</div>';
@@ -258,7 +275,7 @@ function modal(title,body,formType='',uid=''){
   modalContent.innerHTML='<div class="modal-head"><h2>'+title+'</h2><button class="close-modal" type="button" data-action="close-modal" aria-label="閉じる">×</button></div><div class="modal-body">'+(formType?'<form '+(formType==='guest'?'class="guest-editor" novalidate ':'')+'data-form="'+formType+'" data-id="'+e(uid)+'">'+body+'<div class="form-actions">'+(uid?'<button type="button" class="btn danger" data-action="delete" data-id="'+e(uid)+'" data-type="'+e(formType)+'">削除</button>':'')+'<button type="button" class="btn ghost" data-action="close-modal">キャンセル</button><button class="btn primary" type="submit">保存する</button></div></form>':body)+'</div>';dialog.showModal();
 }
 function modalEdit(type,uid=''){
- const plural={task:'tasks',category:'categories',payment:'payments',gift:'gifts',guest:'guests',table:'tables',role:'roles',timeline:'timeline',vendor:'vendors',idea:'ideas',item:'items',thanks:'thanks'};
+ const plural={task:'tasks',category:'categories',payment:'payments',gift:'gifts',guest:'guests',table:'tables',role:'roles',timeline:'timeline',vendor:'vendors',idea:'ideas',item:'items',thanks:'thanks',schedule:'schedules',extra:'extras',present:'presents'};
  const c=plural[type],x=state[c]?.find(v=>v.id===uid)||{};
  let b='',title='';
  if(type==='task'){
@@ -288,6 +305,28 @@ function modalEdit(type,uid=''){
   title=uid?'アイデアを編集':'アイデアを保存';b=field('タイトル','title','text',x.title,true)+choices('種類','category',[['衣装','衣装'],['装花','装花'],['演出','演出'],['会場','会場'],['その他','その他']],x.category||'衣装')+field('参考URL','url','url',x.url||'')+area('メモ','memo',x.memo||'')+'<div class="field"><label>写真</label><input type="file" name="photo" accept="image/*"></div>'+(x.photo?'<img src="'+e(x.photo)+'" alt="登録画像" style="max-width:100%;height:130px;object-fit:contain"> '+checkField('写真を削除','removePhoto',false):'');
  }else if(type==='item'){
   title=uid?'持ち物を編集':'持ち物を追加';b=field('持ち物','title','text',x.title,true)+choices('準備するタイミング','stage',[['前日','前日'],['当日','当日']],x.stage||'前日')+area('メモ','note',x.note||'')+checkField('準備済み','done',x.done);
+ }else if(type==='schedule'){
+  title=uid?'予定を編集':'準備予定を追加';
+  b=field('予定名','title','text',x.title||'',true)+'<div class="form-grid">'+field('日付','date','date',x.date||'',true)+field('時間','time','time',x.time||'')+'</div>'
+   +selectField('role','担当者',state.roles,x.role||state.myRole)
+   +choices('リマインド','remindDays',[['','通知設定に合わせる'],['0','当日'],['1','1日前'],['3','3日前'],['7','7日前']],x.remindDays??'')
+   +area('メモ','memo',x.memo||'')+checkField('完了済み','done',x.done);
+ }else if(type==='extra'){
+  title=uid?'必要品を編集':'追加で必要なもの';
+  b=field('必要なもの','title','text',x.title||'',true)+field('見込金額（円）','amount','number',x.amount||0,true,'min="0"')
+   +field('必要になる日','due','date',x.due||'')+area('備考・購入場所','memo',x.memo||'')
+   +checkField('購入・支払済み','paid',x.paid);
+ }else if(type==='present'){
+  title=uid?'お祝いを編集':'お祝いの記録';
+  b=field('くれた人','sender','text',x.sender||'',true)
+   +choices('種類','kind',[['品物','品物'],['商品券','商品券'],['現金','現金'],['その他','その他']],x.kind||'品物')
+   +field('何をもらった？','received','text',x.received||'',true)
+   +field('もらったものの金額・目安（円）','value','number',x.value||0,false,'min="0"')
+   +'<div class="gift-form-separator">お返しの内容</div>'
+   +field('何を返した？','returnItem','text',x.returnItem||'')
+   +field('お返し金額（円）','returnValue','number',x.returnValue||0,false,'min="0"')
+   +field('お返し日','returnDate','date',x.returnDate||'')
+   +checkField('お返し済み','returned',x.returned)+area('メモ','note',x.note||'');
  }else if(type==='thanks'){
   title=uid?'お礼を編集':'お礼を追加';b=field('お礼をする相手','recipient','text',x.recipient,true)+choices('種類','type',[['内祝い','内祝い'],['お礼状','お礼状'],['引出物の発送','引出物の発送'],['その他','その他']],x.type||'内祝い')+area('品物・発送・メモ','note',x.note||'')+checkField('完了','done',x.done);
  }
@@ -326,7 +365,7 @@ async function submit(form){
  }
  if(type==='comment'){const txt=(v.text||'').trim();if(!txt)return;write('comments',{id:id(),author:nameRole(state.myRole),text:txt,at:Date.now()});dialog.close();toast('ひとことを残しました');return}
  if(type==='budget-total'){setSetting('budgetTotal',Math.max(0,n(v.budget)));dialog.close();toast('全体予算を保存しました');return}
- const types={task:'tasks',category:'categories',payment:'payments',gift:'gifts',guest:'guests',table:'tables',role:'roles',timeline:'timeline',vendor:'vendors',idea:'ideas',item:'items',thanks:'thanks'};
+ const types={task:'tasks',category:'categories',payment:'payments',gift:'gifts',guest:'guests',table:'tables',role:'roles',timeline:'timeline',vendor:'vendors',idea:'ideas',item:'items',thanks:'thanks',schedule:'schedules',extra:'extras',present:'presents'};
  const col=types[type];if(!col)return;
  const old=state[col].find(x=>x.id===uid)||{};
  const item={...old,...v,id:uid||id()};
@@ -344,7 +383,9 @@ async function submit(form){
  if(type==='table'){item.capacity=Math.max(1,n(v.capacity)||8)}
  if(type==='role'){item.color=v.color}
  if(type==='idea'){item.url=safeUrl(v.url);if(flBool(f,'removePhoto'))delete item.photo}
- if(type==='item'||type==='thanks')item.done=flBool(f,'done');
+ if(type==='item'||type==='thanks'||type==='schedule')item.done=flBool(f,'done');
+ if(type==='extra'){item.amount=Math.max(0,n(v.amount));item.paid=flBool(f,'paid')}
+ if(type==='present'){item.value=Math.max(0,n(v.value));item.returnValue=Math.max(0,n(v.returnValue));item.returned=flBool(f,'returned')}
  if(type==='task'||type==='idea'){try{const file=f.get('photo');if(file&&file.size)item.photo=await imageData(file)}catch(err){toast(err.message);return}}
  write(col,item);dialog.close();toast(uid?'更新しました':'追加しました');
 }
@@ -408,10 +449,10 @@ async function handleAction(target){
  if(action==='comment'){modal('ふたりのひとこと',area('メッセージ','text'),'comment');return}
  if(action==='toggle-task'){const x=state.tasks.find(t=>t.id===uid);if(x){write('tasks',{...x,done:!x.done});if(!x.done){completion();toast('おつかれさま！ひとつ完了 ✿')}}return}
  if(action==='toggle-subtask'){const x=state.tasks.find(t=>t.id===uid);if(x){const subId=target.dataset.subid;write('tasks',{...x,subtasks:(x.subtasks||[]).map(a=>a.id===subId?{...a,done:!a.done}:a)})}return}
- if(['toggle-payment','toggle-item','toggle-thanks'].includes(action)){const c={'toggle-payment':'payments','toggle-item':'items','toggle-thanks':'thanks'}[action],x=state[c].find(t=>t.id===uid);if(x){write(c,{...x,paid:action==='toggle-payment'?!x.paid:x.paid,done:action==='toggle-payment'?x.done:!x.done});if(action!=='toggle-payment'&&!x.done)completion()}return}
+ if(['toggle-payment','toggle-item','toggle-thanks','toggle-schedule','toggle-extra'].includes(action)){const c={'toggle-payment':'payments','toggle-item':'items','toggle-thanks':'thanks','toggle-schedule':'schedules','toggle-extra':'extras'}[action],x=state[c].find(t=>t.id===uid);if(x){if(action==='toggle-payment'||action==='toggle-extra')write(c,{...x,paid:!x.paid});else{write(c,{...x,done:!x.done});if(!x.done)completion()}}return}
  if(action.startsWith('new-')||action.startsWith('edit-')){modalEdit(action.split('-')[1],action.startsWith('edit-')?uid:'');return}
  if(action==='delete'){
-  const c={task:'tasks',category:'categories',payment:'payments',gift:'gifts',guest:'guests',table:'tables',role:'roles',timeline:'timeline',vendor:'vendors',idea:'ideas',item:'items',thanks:'thanks'}[target.dataset.type];
+  const c={task:'tasks',category:'categories',payment:'payments',gift:'gifts',guest:'guests',table:'tables',role:'roles',timeline:'timeline',vendor:'vendors',idea:'ideas',item:'items',thanks:'thanks',schedule:'schedules',extra:'extras',present:'presents'}[target.dataset.type];
   if(!c)return;
   if(c==='roles'&&state.roles.length<=1){toast('役割を最低1つ残してください');return}
   if(!window.confirm('削除しますか？ 元に戻せません。'))return;
@@ -437,7 +478,7 @@ function assignGuest(uid,tableId){
 document.addEventListener('click',ev=>{
  const navBtn=ev.target.closest('.bottom-nav [data-tab]');
  if(navBtn){ev.preventDefault();chooseTab(navBtn.dataset.tab);return;}
- const t=ev.target.closest('[data-action]');if(t){if(['toggle-task','toggle-subtask','toggle-item','toggle-thanks','toggle-payment'].includes(t.dataset.action))return;ev.preventDefault();handleAction(t);return}
+ const t=ev.target.closest('[data-action]');if(t){if(['toggle-task','toggle-subtask','toggle-item','toggle-thanks','toggle-payment','toggle-schedule','toggle-extra'].includes(t.dataset.action))return;ev.preventDefault();handleAction(t);return}
  const seat=ev.target.closest('[data-drop-table]');
  if(seat&&selectedGuest){assignGuest(selectedGuest,seat.dataset.dropTable);return}
 });

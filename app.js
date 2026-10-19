@@ -85,22 +85,57 @@ function render(){updatePartnerBell();const bottomNav=document.querySelector('.b
 function getScreenKey(){
  return tab+'|'+(tab==='money'?moneyView:tab==='guests'?guestView:tab==='tasks'?taskRole:morePage);
 }
-function splitPageable(node,limit,depth=0){
- if(!(node instanceof HTMLElement)||depth>4)return [node];
+
+function splitPageable(node,depth=0){
+ if(!(node instanceof HTMLElement)||depth>5)return [node];
  const children=Array.from(node.children);
- if(children.length<2)return [node];
- // Multiple cards/items may be grouped in a list. Preserve their parent styles.
+ if(!children.length)return [node];
  const isFlow=node.matches('.list,.idea-grid,.table-grid,.home-preview,.activity-list,.timeline,.stack');
- const containsRows=node.matches('.card')&&children.some(x=>x.matches('.bar-row,.timeline,.item,.setting-row'));
- if(!isFlow&&!containsRows)return [node];
- const fragments=[];
- while(node.firstChild){
-  const part=node.cloneNode(false);
-  part.classList.add('page-piece');
-  part.appendChild(node.firstChild);
-  fragments.push(part);
+ const isGroup=node.matches('.card')&&(
+  children.length>2||children.some(x=>x.matches('.list,.timeline,.bar-row,.setting-row,.calendar-grid'))
+ );
+ // A large chart or table with a single list-like child must break at item boundaries.
+ if(node.matches('.card')&&children.length===1&&
+    children[0].matches('.list,.timeline,.idea-grid,.table-grid')){
+   const inner=children[0];
+   const pieces=splitPageable(inner,depth+1);
+   if(pieces.length>1)return pieces.map(piece=>{
+    const container=node.cloneNode(false);
+    container.classList.add('page-piece');
+    container.appendChild(piece);
+    return container;
+   });
  }
- return fragments;
+ if(node.matches('.calendar-grid')&&children.length>21){
+  const result=[];
+  // Repeat the weekday header while spreading weeks into two-week spreads.
+  const header=children.slice(0,7);
+  const rest=children.slice(7);
+  for(let i=0;i<rest.length;i+=14){
+   const grid=node.cloneNode(false);grid.classList.add('page-piece');
+   grid.append(...header.map(x=>x.cloneNode(true)),...rest.slice(i,i+14));
+   result.push(grid);
+  }
+  return result;
+ }
+ if(!isFlow&&!isGroup)return [node];
+ const parts=[];
+ while(node.firstChild){
+  const child=node.firstChild;
+  if(child.nodeType===Node.TEXT_NODE&&!child.textContent.trim()){node.removeChild(child);continue}
+  const fragment=node.cloneNode(false);
+  fragment.classList.add('page-piece');
+  fragment.appendChild(child);
+  if(child.matches?.('.calendar-grid')){
+   for(const piece of splitPageable(child,depth+1)){
+    const wrapped=node.cloneNode(false);
+    wrapped.classList.add('page-piece');
+    wrapped.appendChild(piece);
+    parts.push(wrapped);
+   }
+  }else parts.push(fragment);
+ }
+ return parts.length?parts:[node];
 }
 function presentPage(page){
  if(!activePager||!activePager.pages.length)return;

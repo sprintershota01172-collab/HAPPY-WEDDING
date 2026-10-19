@@ -366,15 +366,33 @@ function renderSubpage(){
  return moreTitle('準備');
 }
 function renderSettings(){
- return moreTitle('基本設定')+'<div class="caption">Version 20261020r3</div><div class="card"><form data-form="settings">'+field('挙式日','date','date',state.date,true)+field('新郎の呼び名','couple0','text',state.couple[0])+field('新婦の呼び名','couple1','text',state.couple[1])+'<button class="btn primary btn-wide">設定を保存</button></form></div><div class="card"><h2>リマインド</h2><p class="small muted">アプリを開いたとき・戻ったときに期限をお知らせします。</p>'+btn(state.reminders?'通知をオフにする':'通知をオンにする','notifications','','light')+'<form data-form="reminder-settings"><div class="field"><label>何日前からお知らせする？</label><select name="reminderDays">'+[[0,'当日'],[1,'1日前'],[3,'3日前'],[7,'7日前'],[14,'14日前']].map(v=>'<option value="'+v[0]+'" '+(n(state.reminderDays)===v[0]?'selected':'')+'>'+v[1]+'</option>').join('')+'</select></div><button class="btn light btn-wide" type="submit">通知タイミングを保存</button></form><p class="caption">パートナーの変更は共有接続中にリアルタイム通知。閉じている間は配信設定が必要です。</p>'+btn('パートナー通知を許可','partner-push','','light')+'</div><div class="card"><h2>保存について</h2><p class="small muted">端末に自動保存します。iPhoneの「ホーム画面に追加」前後で、ブラウザ内の保存領域が別になる場合があります。大切なデータはバックアップを保存してください。</p>'+btn('バックアップへ','more','backup')+'</div>';
+ return moreTitle('基本設定')+'<div class="caption">Version 20261020r4</div><div class="card"><form data-form="settings">'+field('挙式日','date','date',state.date,true)+field('新郎の呼び名','couple0','text',state.couple[0])+field('新婦の呼び名','couple1','text',state.couple[1])+'<button class="btn primary btn-wide">設定を保存</button></form></div><div class="card"><h2>リマインド</h2><p class="small muted">アプリを開いたとき・戻ったときに期限をお知らせします。</p>'+btn(state.reminders?'通知をオフにする':'通知をオンにする','notifications','','light')+'<form data-form="reminder-settings"><div class="field"><label>何日前からお知らせする？</label><select name="reminderDays">'+[[0,'当日'],[1,'1日前'],[3,'3日前'],[7,'7日前'],[14,'14日前']].map(v=>'<option value="'+v[0]+'" '+(n(state.reminderDays)===v[0]?'selected':'')+'>'+v[1]+'</option>').join('')+'</select></div><button class="btn light btn-wide" type="submit">通知タイミングを保存</button></form><p class="caption">パートナーの変更は共有接続中にリアルタイム通知。閉じている間は配信設定が必要です。</p>'+btn('パートナー通知を許可','partner-push','','light')+'</div><div class="card"><h2>保存について</h2><p class="small muted">端末に自動保存します。iPhoneの「ホーム画面に追加」前後で、ブラウザ内の保存領域が別になる場合があります。大切なデータはバックアップを保存してください。</p>'+btn('バックアップへ','more','backup')+'</div>';
 }
 function renderBackup(){
  return moreTitle('バックアップと書き出し')+'<div class="card"><h2>JSONバックアップ</h2><p class="small muted">ゲスト、タスク、予算、写真などを一括保存・復元します。</p><div class="page-actions">'+btn('バックアップを保存','export-json','','primary')+btn('バックアップを読み込む','import-json')+'</div><input id="import-file" type="file" accept=".json,application/json" hidden></div><div class="card"><h2>CSV書き出し</h2><p class="small muted">Excelで使える形式で項目別に保存します。</p><div class="field"><select id="csv-section">'+ARRAYS.map(k=>'<option value="'+k+'">'+e(({tasks:'タスク',guests:'ゲスト',payments:'支払い',categories:'予算項目',gifts:'ご祝儀',roles:'役割',tables:'卓',timeline:'当日進行',vendors:'業者',ideas:'アイデア',items:'持ち物',thanks:'お礼',comments:'コメント'})[k])+'</option>').join('')+'</select></div>'+btn('CSVを保存','export-csv','','light')+'</div><p class="caption">JSONファイルには個人情報が含まれるため、第三者には渡さず安全に保管してください。</p>';
 }
+
 function renderSync(){
- const cfg=cloud?.config||{},code=cloud?.room||'';
- return moreTitle('ふたりでリアルタイム共有')+'<div class="card"><h2>共有のしくみ</h2><p class="small muted">Firebase（外部クラウド）を設定すると、ふたりの端末でタスクやゲストなどを同期できます。設定がなくても、端末だけで全機能を使えます。</p><div class="notice">重要：共有コードを知る人はデータにアクセスできます。招待相手以外にコードを渡さないでください。ご利用前にFirebaseのセキュリティルールをREADMEどおりに設定してください。</div></div><div class="card"><h2>Firebaseの接続設定</h2><form data-form="sync"><div class="field"><label>API Key</label><input name="apiKey" required value="'+e(cfg.apiKey||'')+'" placeholder="AIza..." autocomplete="off"></div><div class="field"><label>Project ID</label><input name="projectId" required value="'+e(cfg.projectId||'')+'" autocomplete="off"></div><div class="field"><label>App ID</label><input name="appId" required value="'+e(cfg.appId||'')+'" autocomplete="off"></div><div class="field"><label>Auth Domain</label><input name="authDomain" value="'+e(cfg.authDomain||'')+'" autocomplete="off"></div><div class="field"><label>共有コード（48文字）</label><input name="room" required value="'+e(code)+'" minlength="48" maxlength="48" placeholder="下のボタンで新しく作成、または相手から貼付" autocomplete="off"></div><div class="field"><label>Webプッシュ公開鍵（任意）</label><input name="pushPublicKey" value="'+e(cloud?.pushPublicKey||'')+'" placeholder="VAPID公開鍵" autocomplete="off"></div><div class="page-actions mb">'+btn('新しい共有コードを発行','generate-room')+btn('コードをコピー','copy-room')+'</div><button class="btn primary btn-wide">保存して接続</button></form><div class="caption">両端末に同じFirebase設定と共有コードを入力してください。匿名認証を利用します。</div></div>'+(syncEnabled()?'<div class="card">'+btn('共有接続を解除','disconnect','','danger')+'<p class="caption">解除しても端末に保存したデータは残ります。</p><div class="small muted">未送信の変更: '+queuedCount()+' 件</div></div>':'');
+ const connected=syncEnabled();
+ return moreTitle('ふたりで共有')
+ +'<div class="card"><h2>パートナーとリアルタイム同期</h2>'
+ +'<p class="small muted">クラウド共有にはFirebaseの接続設定が必要です。未接続でも端末保存は使えます。</p>'
+ +'<div class="notice">共有コードは招待した相手にだけ渡してください。Firestoreのセキュリティ設定も必要です。</div>'
+ +btn(connected?'接続設定を編集':'＋ 接続設定を登録','sync-config','','primary')+'</div>'
+ +(connected?'<div class="card"><b>共有コード設定済み</b><p class="small muted">未送信の変更：'+queuedCount()+' 件</p>'+btn('接続を解除','disconnect','','danger')+'</div>':'');
 }
+function openSyncConfig(){
+ const cfg=cloud?.config||{},code=cloud?.room||'';
+ const fields='<div class="field"><label>API Key</label><input name="apiKey" required value="'+e(cfg.apiKey||'')+'" placeholder="AIza..." autocomplete="off"></div>'
+ +'<div class="field"><label>Project ID</label><input name="projectId" required value="'+e(cfg.projectId||'')+'" autocomplete="off"></div>'
+ +'<div class="field"><label>App ID</label><input name="appId" required value="'+e(cfg.appId||'')+'" autocomplete="off"></div>'
+ +'<div class="field"><label>Auth Domain</label><input name="authDomain" value="'+e(cfg.authDomain||'')+'" autocomplete="off"></div>'
+ +'<div class="field"><label>共有コード（48文字）</label><input name="room" required value="'+e(code)+'" minlength="48" maxlength="48" autocomplete="off"></div>'
+ +'<div class="page-actions">'+btn('コードを発行','generate-room')+btn('コピー','copy-room')+'</div>'
+ +'<div class="field"><label>Webプッシュ公開鍵（任意）</label><input name="pushPublicKey" value="'+e(cloud?.pushPublicKey||'')+'" autocomplete="off"></div>';
+ modal('共有の接続設定',fields,'sync');
+}
+
 function field(label,name,type='text',value='',required=false,extra=''){
  return '<div class="field"><label for="f-'+e(name)+'">'+e(label)+'</label><input id="f-'+e(name)+'" name="'+e(name)+'" type="'+e(type)+'" value="'+e(value)+'" '+(required?'required':'')+' '+extra+'></div>';
 }
@@ -679,6 +697,7 @@ function remind(){
 async function handleAction(target){
  const action=target.dataset.action,uid=target.dataset.id;
  if(!action)return;
+ if(action==='sync-config'){openSyncConfig();return}
  if(action==='pager-prev'||action==='pager-next'){if(activePager)presentPage(activePager.index+(action==='pager-next'?1:-1));return}
  if(action==='dialog-prev'||action==='dialog-next'){if(dialogListPager)setDialogListPage(dialogListPager.index+(action==='dialog-next'?1:-1));return}
  if(action==='form-prev'||action==='form-next'){

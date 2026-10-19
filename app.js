@@ -372,7 +372,7 @@ function forecastCat(c){return n(c.contract)>0?n(c.contract):n(c.estimate)}
 function totalForecast(){return state.categories.reduce((s,c)=>s+forecastCat(c),0)}
 function renderMoney(){
  let h=header('お金の管理',btn('＋ 追加','money-add','','primary'),'見積から支払い、ご祝儀までひと目で');
- h+='<div class="tabs">'+[['overview','資金'],['honeymoon','旅費'],['extras','必要品'],['categories','費用'],['payments','支払い'],['gifts','ご祝儀']].map(v=>'<button class="tab '+(moneyView===v[0]?'active':'')+'" data-action="money-view" data-id="'+v[0]+'">'+v[1]+'</button>').join('')+'</div>';
+ h+='<div class="tabs">'+[['overview','資金'],['honeymoon','旅費'],['extras','必要品'],['categories','費用'],['payments','支払い'],['gifts','ご祝儀']].map(v=>'<button class="tab '+(moneyView===v[0]||(moneyView==='accounts'&&v[0]==='overview')?'active':'')+'" data-action="money-view" data-id="'+v[0]+'">'+v[1]+'</button>').join('')+'</div>';
  const budget=n(state.budgetTotal),travel=honeymoonQuote(),ceremonyCost=state.categories.filter(c=>c.id!==honeymoonCategory()?.id).reduce((sum,c)=>sum+(forecastCat(c)||n(c.budget)),0),cost=ceremonyCost+travel,paid=totalPaid(),gifts=totalGifts();
  if(moneyView==='overview'){
   h+=financePanel();
@@ -883,7 +883,7 @@ async function handleAction(target){
  if(action==='guest-view'){guestView=uid;render();return}
  if(action==='template'){templateTasks();return}
  if(action==='calendar-export'){exportWeddingCalendar();return}
- if(action==='money-add'){modal('何を追加する？','<div class="stack">'+btn('新婚旅行費を入力','edit-honeymoon','','light')+btn('必要なものを追加','new-extra','','light')+btn('予算項目を追加','new-category','','light')+btn('支払い予定を追加','new-payment','','light')+btn('ご祝儀を追加','new-gift','','light')+'</div>');return}
+ if(action==='money-add'){modal('何を追加する？','<div class="stack">'+btn('貯金・口座を追加','new-saving','','light')+btn('新婚旅行費を入力','edit-honeymoon','','light')+btn('必要なものを追加','new-extra','','light')+btn('予算項目を追加','new-category','','light')+btn('支払い予定を追加','new-payment','','light')+btn('ご祝儀を追加','new-gift','','light')+'</div>');return}
  if(action==='edit-savings'){moneyView='accounts';render();return}
  if(action==='new-saving'){savingEditor();return}
  if(action==='edit-saving'){savingEditor(uid);return}

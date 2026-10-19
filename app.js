@@ -176,7 +176,11 @@ function renderMoney(){
  }
  if(moneyView==='categories'){
   h+='<div class="page-actions mb">'+btn('＋ 項目を追加','new-category','','light')+btn('全体予算の設定','budget-total')+'</div>';
-  h+=state.categories.map(c=>'<div class="card"><div class="row between"><b>'+e(c.icon||'♡')+' '+e(c.name)+'</b>'+btn('編集','edit-category',c.id)+'</div><div class="row between mt"><span class="small muted">予算</span><b>'+yen(c.budget)+'</b></div><div class="row between mt"><span class="small muted">見積 / 契約</span><b>'+yen(c.estimate)+' / '+yen(c.contract)+'</b></div><div class="row between mt"><span class="small muted">支払済み / 未払い見込</span><b>'+yen(paidCategory(c))+' / '+yen(Math.max(0,forecastCat(c)-paidCategory(c)))+'</b></div>'+ (n(c.budget)&&forecastCat(c)>n(c.budget)?'<div class="caption warning">予算を'+yen(forecastCat(c)-n(c.budget))+'超えています</div>':'')+'</div>').join('');
+  h+=state.categories.map(c=>'<div class="budget-band"><div class="row between"><b>'+e(c.icon||'♡')+' '+e(c.name)+'</b>'+btn('編集','edit-category',c.id)+'</div>'
+    +'<div class="budget-numbers"><span>予算 <strong>'+yen(c.budget)+'</strong></span><span>見積 <strong>'+yen(c.estimate)+'</strong></span>'
+    +'<span>契約 <strong>'+yen(c.contract)+'</strong></span><span>支払済 <strong>'+yen(paidCategory(c))+'</strong></span>'
+    +'<span>未払い <strong>'+yen(Math.max(0,Math.max(forecastCat(c)||n(c.budget),state.payments.filter(p=>p.category===c.id).reduce((a,p)=>a+n(p.amount),0))-paidCategory(c)))+'</strong></span></div>'
+    +(n(c.budget)&&forecastCat(c)>n(c.budget)?'<p class="caption warning">予算超過 '+yen(forecastCat(c)-n(c.budget))+'</p>':'')+'</div>').join('');
  }
  if(moneyView==='payments'){
   h+='<div class="page-actions mb">'+btn('＋ 支払い予定','new-payment','','primary')+'</div>';

@@ -5,18 +5,22 @@ let pending=JSON.parse(localStorage.getItem(PENDING_KEY)||'[]');
 function saveQueue(){try{localStorage.setItem(PENDING_KEY,JSON.stringify(pending))}catch(e){console.warn('Queue storage full',e)}}
 export function roomCode(){const bytes=new Uint8Array(24);crypto.getRandomValues(bytes);return Array.from(bytes,x=>x.toString(16).padStart(2,'0')).join('')}
 export function queueChange(collection,id,value,deleted=false){
- const entry={collection,id,value,deleted,updatedAt:Date.now()};
- pending=pending.filter(x=>!(x.collection===collection&&x.id===id));
+ const room=JSON.parse(localStorage.getItem('happy_wedding_cloud_v1')||'null')?.room||'';
+ const entry={collection,id,value,deleted,updatedAt:Date.now(),room};
+ pending=pending.filter(x=>!(x.room===room&&x.collection===collection&&x.id===id));
  pending.push(entry);saveQueue();flush();return entry;
 }
 async function flush(){
  if(!active||active.flushing||!navigator.onLine)return;
  active.flushing=true;
  try{
-  while(pending.length&&active&&navigator.onLine){
-   const item=pending[0];
-   await active.setDoc(active.doc(active.db,'rooms',active.room,'records',item.collection+'_'+item.id),item);
-   pending.shift();saveQueue();
+  while(active&&navigator.onLine){
+   const i=pending.findIndex(x=>x.room===active.room);
+   if(i<0)break;
+   const item=pending[i];
+   const payload={collection:item.collection,id:item.id,value:item.value,deleted:item.deleted,updatedAt:item.updatedAt};
+   await active.setDoc(active.doc(active.db,'rooms',active.room,'records',item.collection+'_'+item.id),payload);
+   pending.splice(i,1);saveQueue();
   }
   if(active&&active.onStatus)active.onStatus('synced');
  }catch(e){if(active&&active.onStatus)active.onStatus('offline');console.warn('Cloud sync queued',e)}
@@ -43,7 +47,7 @@ export async function startSync(config,room,onRemote,onStatus,onReady){
   for(const change of snapshot.docChanges()){
    const entry=change.doc.data();
    if(!entry.collection||!entry.id)continue;
-   const dirty=pending.some(x=>x.collection===entry.collection&&x.id===entry.id);
+   const dirty=pending.some(x=>x.room===room&&x.collection===entry.collection&&x.id===entry.id);
    if(!dirty)onRemote(entry);
   }
   if(!current.ready){current.ready=true;onReady(snapshot.empty);}

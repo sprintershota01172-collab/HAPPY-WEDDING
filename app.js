@@ -14,7 +14,7 @@ const DEFAULT_CATEGORIES=['会場','衣装','写真・映像','料理','装花',
 const ARRAYS=['roles','categories','tasks','payments','gifts','guests','tables','timeline','vendors','ideas','items','thanks','comments','schedules','extras','presents'];
 function defaults(){return {version:1,setup:0,date:'',myRole:'groom',couple:['新郎','新婦'],budgetTotal:0,savings:null,reminders:false,reminderDays:3,roles:DEFAULT_ROLES,categories:DEFAULT_CATEGORIES,tasks:[],payments:[],gifts:[],guests:[],tables:[],timeline:[],vendors:[],ideas:[],items:[],thanks:[],comments:[],schedules:[],extras:[],presents:[]}}
 function load(){try{const v=JSON.parse(localStorage.getItem(KEY)||'null');if(!v)return defaults();const d=defaults();return {...d,...v,...Object.fromEntries(ARRAYS.map(k=>[k,Array.isArray(v[k])?v[k]:d[k]]))}}catch(e){return defaults()}}
-let state=load(), tab='home', taskRole='all', guestView='list', moneyView='overview', paymentMonth='',paymentDateSelected='', morePage='',selectedGuest='', cloud=null;
+let state=load(), tab='home', taskRole='all', guestView='list', moneyView='overview', paymentMonth='',paymentDateSelected='', morePage='',presentView='received',selectedGuest='', cloud=null;
 const app=document.getElementById('main'),dialog=document.getElementById('modal'),modalContent=document.getElementById('modal-content'),toastEl=document.getElementById('toast');
 let toastTimer=0,renderScheduled=false,completionSound=false;
 const pageByKey=new Map();
@@ -83,7 +83,7 @@ function render(){updatePartnerBell();const bottomNav=document.querySelector('.b
  * Large lists are segmented into individual item shells before measuring pages.
  */
 function getScreenKey(){
- return tab+'|'+(tab==='money'?moneyView:tab==='guests'?guestView:tab==='tasks'?taskRole:morePage);
+ return tab+'|'+(tab==='money'?moneyView:tab==='guests'?guestView:tab==='tasks'?taskRole:tab==='presents'?presentView:morePage);
 }
 
 function splitPageable(node,depth=0){
@@ -181,7 +181,7 @@ function organizeScreen(){
  panel.setAttribute('aria-label',({home:'準備の概要',tasks:'タスク一覧',money:'お金の詳細',guests:'ゲスト管理',presents:'お祝い・お返し',more:'その他の項目'})[tab]);
  const key=getScreenKey();
  // Do not pin finance or progress cards: they must fit inside one paginated frame.
- let pinnedCount=tab==='home'?0:tab==='tasks'?4:tab==='guests'?3:tab==='money'?2:tab==='presents'?1:morePage?0:1;
+ let pinnedCount=tab==='home'?0:tab==='tasks'?4:tab==='guests'?3:tab==='money'?2:tab==='presents'?2:morePage?0:1;
  children.forEach((node,i)=>(i<pinnedCount?pinned:panel).appendChild(node));
  const nav=document.createElement('div');nav.className='page-navigation';
  nav.innerHTML='<button class="page-arrow" data-action="pager-prev" type="button" aria-label="前のページ">‹ 前</button>'
@@ -276,7 +276,7 @@ function totalForecast(){return state.categories.reduce((s,c)=>s+forecastCat(c),
 function renderMoney(){
  let h=header('お金の管理',btn('＋ 追加','money-add','','primary'),'見積から支払い、ご祝儀までひと目で');
  h+='<div class="tabs">'+[['overview','資金'],['honeymoon','旅費'],['extras','必要品'],['categories','費用'],['payments','支払い'],['gifts','ご祝儀']].map(v=>'<button class="tab '+(moneyView===v[0]?'active':'')+'" data-action="money-view" data-id="'+v[0]+'">'+v[1]+'</button>').join('')+'</div>';
- const budget=n(state.budgetTotal),cost=totalForecast(),travel=honeymoonQuote(),ceremonyCost=Math.max(0,cost-travel),paid=totalPaid(),gifts=totalGifts();
+ const budget=n(state.budgetTotal),travel=honeymoonQuote(),ceremonyCost=state.categories.filter(c=>c.id!==honeymoonCategory()?.id).reduce((sum,c)=>sum+(forecastCat(c)||n(c.budget)),0),cost=ceremonyCost+travel,paid=totalPaid(),gifts=totalGifts();
  if(moneyView==='overview'){
   h+=financePanel();
   h+='<div class="money-summary"><div><span>結婚式費用（見込）</span><strong>'+yen(ceremonyCost)+'</strong></div>'
@@ -345,7 +345,7 @@ function guestChip(g){return '<button class="seat-chip" draggable="true" data-gu
 function moreTitle(label){return '<div class="row mb">'+btn('← 戻る','more','','ghost tiny')+'<h1 style="font-size:20px;margin:0">'+e(label)+'</h1></div>'}
 function renderMore(){
  if(morePage)return renderSubpage();
- const entries=[['appointments','準備スケジュール','打合せ・試着・期限を登録','◷'],['schedule','当日のタイムライン','進行やスピーチ担当を整理','◷'],['vendors','業者・打ち合わせ','連絡先と決定事項を記録','⌂'],['ideas','アイデアボード','好きな写真やURLを保存','✿'],['packing','持ち物','前日・当日のチェック','▣'],['thanks','お礼リスト','お礼状・内祝い・発送','♡'],['roles','役割の管理','名前・カラー・自分の担当を編集','♧'],['sync','ふたりで共有','リアルタイム同期の設定','⇄'],['backup','バックアップ','JSON保存・読み込み・CSV書出し','⇩'],['settings','基本設定','挙式日・ふたりの名前・通知','⚙']];
+ const entries=[['appointments','準備スケジュール','打合せ・試着・期限を登録','◷'],['schedule','当日のタイムライン','進行やスピーチ担当を整理','◷'],['vendors','業者・打ち合わせ','連絡先と決定事項を記録','⌂'],['ideas','アイデアボード','好きな写真やURLを保存','✿'],['packing','持ち物','前日・当日のチェック','▣'],['roles','役割の管理','名前・カラー・自分の担当を編集','♧'],['sync','ふたりで共有','リアルタイム同期の設定','⇄'],['backup','バックアップ','JSON保存・読み込み・CSV書出し','⇩'],['settings','基本設定','挙式日・ふたりの名前・通知','⚙']];
  return header('その他','','準備の記録や設定も、ここにまとめて')+'<div class="card flush">'+entries.map((v,i)=>'<button data-action="more" data-id="'+v[0]+'" style="display:flex;align-items:center;width:100%;gap:12px;border:0;background:transparent;padding:15px;border-bottom:'+(i===entries.length-1?'0':'1px solid #f2e9e5')+';text-align:left"><span style="font-size:22px;color:#c59499;width:29px;text-align:center">'+v[3]+'</span><span class="grow"><b style="font-size:13px">'+v[1]+'</b><div class="small muted" style="margin-top:3px">'+v[2]+'</div></span><span class="muted">›</span></button>').join('')+'</div>';
 }
 
@@ -357,10 +357,26 @@ function renderAppointments(){
 }
 function renderPresents(){
  const all=state.presents,returned=all.filter(x=>x.returned).length;
- return header('お祝い・お返し',btn('＋ 登録','new-present','','primary'),'もらったもの・お返しを管理')
- +'<div class="compact-summary">登録 <b>'+all.length+'件</b><span>お返し済 <b>'+returned+'件</b></span><span>未対応 <b>'+(all.length-returned)+'件</b></span></div>'
- +'<div class="list compact-list">'+(all.length?all.map(x=>'<div class="item"><div class="content"><b class="item-title">'+e(x.sender)+'</b><div class="item-sub">'+e(x.kind||'品物')+' · '+e(x.received||'内容未登録')+(n(x.value)?' · '+yen(x.value):'')+'</div><div class="item-sub">'+(x.returned?'お返し済':'お返し未完了')+'：'+e(x.returnItem||'未登録')+(n(x.returnValue)?' · '+yen(x.returnValue):'')+'</div></div>'+btn('編集','edit-present',x.id)+'</div>').join(''):empty('物・商品券・現金などのお祝いと、お返しを記録できます。'))+'</div>'
- +'<p class="caption">ここで登録する受領額は予算の収入に自動加算しません。ご祝儀と重複させないためです。</p>';
+ const right=presentView==='received'?btn('＋ お祝い','new-present','','primary'):btn('＋ お礼状','new-thanks','','primary');
+ let h=header('お祝い・お返し',right);
+ h+='<div class="tabs gift-tabs">'+[['received','お祝い・お返し'],['thanks','お礼状・発送']].map(x=>
+  '<button type="button" class="tab '+(presentView===x[0]?'active':'')+'" data-action="present-view" data-id="'+x[0]+'">'+x[1]+'</button>'
+ ).join('')+'</div>';
+ if(presentView==='thanks'){
+  h+='<div class="compact-summary">お礼状・内祝い・発送の管理 <b>'+state.thanks.filter(x=>x.done).length+' / '+state.thanks.length+'件 完了</b></div>';
+  h+='<div class="list compact-list">'+(state.thanks.length?state.thanks.map(x=>
+   '<div class="item '+(x.done?'done':'')+'"><input type="checkbox" class="check" data-action="toggle-thanks" data-id="'+e(x.id)+'" '+(x.done?'checked':'')+' aria-label="お礼を完了">'
+   +'<div class="content"><b class="item-title">'+e(x.recipient)+'</b><div class="item-sub">'+e(x.type||'内祝い')+' · '+e(x.note||'')+'</div></div>'
+   +btn('編集','edit-thanks',x.id)+'</div>').join(''):empty('お礼状や引出物の発送予定を登録できます。'))+'</div>';
+ }else{
+  h+='<div class="compact-summary">登録 <b>'+all.length+'件</b><span>お返し済 <b>'+returned+'件</b></span><span>未対応 <b>'+(all.length-returned)+'件</b></span></div>';
+  h+='<div class="list compact-list">'+(all.length?all.map(x=>
+   '<div class="item"><div class="content"><b class="item-title">'+e(x.sender)+'</b><div class="item-sub">'+e(x.kind||'品物')+' · '+e(x.received||'内容未登録')+(n(x.value)?' · '+yen(x.value):'')+'</div>'
+   +'<div class="item-sub">'+(x.returned?'お返し済':'お返し未完了')+'：'+e(x.returnItem||'未登録')+(n(x.returnValue)?' · '+yen(x.returnValue):'')+'</div></div>'
+   +btn('編集','edit-present',x.id)+'</div>').join(''):empty('品物・商品券・現金などのお祝いとお返しを記録できます。'))+'</div>';
+  h+='<p class="caption">お祝い台帳は、ご祝儀の収入に重複加算しません。</p>';
+ }
+ return h;
 }
 
 function renderSubpage(){
@@ -370,14 +386,14 @@ function renderSubpage(){
  if(morePage==='vendors')return moreTitle('業者・打ち合わせ')+btn('＋ 業者を登録','new-vendor','','primary')+'<div class="list mt">'+(state.vendors.length?state.vendors.map(v=>'<div class="item"><div class="content"><b>'+e(v.company)+'</b><div class="item-sub">'+e(v.contact||'')+' · '+e(v.phone||'')+'</div><div class="item-sub">'+e(v.decisions||'')+'</div></div>'+btn('編集','edit-vendor',v.id)+'</div>').join(''):empty('業者の連絡先と打ち合わせ履歴を保存できます。'))+'</div>';
  if(morePage==='ideas')return moreTitle('アイデアボード')+btn('＋ アイデア保存','new-idea','','primary')+'<div class="idea-grid mt">'+(state.ideas.length?state.ideas.map(v=>'<div class="idea-card">'+(v.photo?'<img src="'+e(v.photo)+'" alt="アイデア写真">':'<div style="height:110px;background:#fff0f1;display:grid;place-items:center;font-size:35px;color:#d9a8ae">✿</div>')+'<div class="idea-content"><b>'+e(v.title)+'</b><div class="small muted">'+e(v.category||'')+'</div>'+(v.url?'<a href="'+e(safeUrl(v.url))+'" target="_blank" rel="noopener noreferrer">リンクを見る ↗</a>':'')+'<div>'+btn('編集','edit-idea',v.id)+'</div></div></div>').join(''):empty('お気に入りの装花や衣装を集めましょう。'))+'</div>';
  if(morePage==='packing')return moreTitle('持ち物チェック')+btn('＋ 持ち物','new-item','','primary')+(['前日','当日'].map(stage=>section(stage)+(state.items.filter(x=>x.stage===stage).length?'<div class="list">'+state.items.filter(x=>x.stage===stage).map(x=>'<div class="item '+(x.done?'done':'')+'"><input type="checkbox" class="check" data-action="toggle-item" data-id="'+e(x.id)+'" '+(x.done?'checked':'')+'><div class="content"><b class="item-title">'+e(x.title)+'</b><div class="item-sub">'+e(x.note||'')+'</div></div>'+btn('編集','edit-item',x.id)+'</div>').join('')+'</div>':empty('まだ登録されていません。'))).join(''));
- if(morePage==='thanks')return moreTitle('お礼リスト')+btn('＋ お礼を追加','new-thanks','','primary')+'<div class="list mt">'+(state.thanks.length?state.thanks.map(x=>'<div class="item '+(x.done?'done':'')+'"><input type="checkbox" class="check" data-action="toggle-thanks" data-id="'+e(x.id)+'" '+(x.done?'checked':'')+'><div class="content"><b>'+e(x.recipient)+'</b><div class="item-sub">'+e(x.type||'内祝い')+' · '+e(x.note||'')+'</div></div>'+btn('編集','edit-thanks',x.id)+'</div>').join(''):empty('結婚式後のお礼も漏れなく管理しましょう。'))+'</div>';
+
  if(morePage==='settings')return renderSettings();
  if(morePage==='backup')return renderBackup();
  if(morePage==='sync')return renderSync();
  return moreTitle('準備');
 }
 function renderSettings(){
- return moreTitle('基本設定')+'<div class="caption">Version 20261020r5</div><div class="card"><form data-form="settings">'+field('挙式日','date','date',state.date,true)+field('新郎の呼び名','couple0','text',state.couple[0])+field('新婦の呼び名','couple1','text',state.couple[1])+'<button class="btn primary btn-wide">設定を保存</button></form></div><div class="card"><h2>リマインド</h2><p class="small muted">アプリを開いたとき・戻ったときに期限をお知らせします。</p>'+btn(state.reminders?'通知をオフにする':'通知をオンにする','notifications','','light')+'<form data-form="reminder-settings"><div class="field"><label>何日前からお知らせする？</label><select name="reminderDays">'+[[0,'当日'],[1,'1日前'],[3,'3日前'],[7,'7日前'],[14,'14日前']].map(v=>'<option value="'+v[0]+'" '+(n(state.reminderDays)===v[0]?'selected':'')+'>'+v[1]+'</option>').join('')+'</select></div><button class="btn light btn-wide" type="submit">通知タイミングを保存</button></form><p class="caption">パートナーの変更は共有接続中にリアルタイム通知。閉じている間は配信設定が必要です。</p>'+btn('パートナー通知を許可','partner-push','','light')+'</div><div class="card"><h2>保存について</h2><p class="small muted">端末に自動保存します。iPhoneの「ホーム画面に追加」前後で、ブラウザ内の保存領域が別になる場合があります。大切なデータはバックアップを保存してください。</p>'+btn('バックアップへ','more','backup')+'</div>';
+ return moreTitle('基本設定')+'<div class="caption">Version 20261020r6</div><div class="card"><form data-form="settings">'+field('挙式日','date','date',state.date,true)+field('新郎の呼び名','couple0','text',state.couple[0])+field('新婦の呼び名','couple1','text',state.couple[1])+'<button class="btn primary btn-wide">設定を保存</button></form></div><div class="card"><h2>リマインド</h2><p class="small muted">アプリを開いたとき・戻ったときに期限をお知らせします。</p>'+btn(state.reminders?'通知をオフにする':'通知をオンにする','notifications','','light')+'<form data-form="reminder-settings"><div class="field"><label>何日前からお知らせする？</label><select name="reminderDays">'+[[0,'当日'],[1,'1日前'],[3,'3日前'],[7,'7日前'],[14,'14日前']].map(v=>'<option value="'+v[0]+'" '+(n(state.reminderDays)===v[0]?'selected':'')+'>'+v[1]+'</option>').join('')+'</select></div><button class="btn light btn-wide" type="submit">通知タイミングを保存</button></form><p class="caption">パートナーの変更は共有接続中にリアルタイム通知。閉じている間は配信設定が必要です。</p>'+btn('パートナー通知を許可','partner-push','','light')+'</div><div class="card"><h2>保存について</h2><p class="small muted">端末に自動保存します。iPhoneの「ホーム画面に追加」前後で、ブラウザ内の保存領域が別になる場合があります。大切なデータはバックアップを保存してください。</p>'+btn('バックアップへ','more','backup')+'</div>';
 }
 function renderBackup(){
  return moreTitle('バックアップと書き出し')+'<div class="card"><h2>JSONバックアップ</h2><p class="small muted">ゲスト、タスク、予算、写真などを一括保存・復元します。</p><div class="page-actions">'+btn('バックアップを保存','export-json','','primary')+btn('バックアップを読み込む','import-json')+'</div><input id="import-file" type="file" accept=".json,application/json" hidden></div><div class="card"><h2>CSV書き出し</h2><p class="small muted">Excelで使える形式で項目別に保存します。</p><div class="field"><select id="csv-section">'+ARRAYS.map(k=>'<option value="'+k+'">'+e(({tasks:'タスク',guests:'ゲスト',payments:'支払い',categories:'予算項目',gifts:'ご祝儀',roles:'役割',tables:'卓',timeline:'当日進行',vendors:'業者',ideas:'アイデア',items:'持ち物',thanks:'お礼',comments:'コメント'})[k])+'</option>').join('')+'</select></div>'+btn('CSVを保存','export-csv','','light')+'</div><p class="caption">JSONファイルには個人情報が含まれるため、第三者には渡さず安全に保管してください。</p>';
@@ -732,6 +748,7 @@ async function handleAction(target){
 
  if(action==='task-filter'){taskRole=uid;render();return}
  if(action==='money-view'){moneyView=uid;render();return}
+ if(action==='present-view'){presentView=uid;render();return}
  if(action==='pay-month'){const [y,m]=paymentMonth.split('-').map(Number);const d=new Date(y,m-1+n(uid),1);paymentMonth=d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0');paymentDateSelected='';render();return}
  if(action==='pay-day'){paymentDateSelected=paymentDateSelected===uid?'':uid;render();return}
  if(action==='pay-clear'){paymentDateSelected='';render();return}

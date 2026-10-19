@@ -626,3 +626,7 @@ dialog::backdrop{background:rgba(20,35,26,.40)!important;backdrop-filter:none!im
 .honeymoon-grid strong{font-family:-apple-system,BlinkMacSystemFont,"Helvetica Neue",Arial,sans-serif;font-size:clamp(17px,5vw,23px);font-weight:680;letter-spacing:-.012em;font-variant-numeric:tabular-nums;color:#3a604e;overflow-wrap:anywhere}
 .honeymoon-panel .caption{margin:0;font-size:10px;line-height:1.55;color:#76847a}
 @media(max-width:350px){.bottom-nav button{font-size:9px!important}.bottom-nav button .nav-icon svg{width:19px!important;height:19px!important}}
+
+/* Gift tab: two sections without any scrolling */
+.gift-tabs{gap:8px!important}
+.gift-tabs .tab{flex:1 1 0!important;min-width:0!important;min-height:36px!important;font-size:12px!important}

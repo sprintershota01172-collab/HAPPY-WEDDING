@@ -160,6 +160,7 @@ function renderMoney(){
  h+='<div class="tabs">'+[['overview','資金'],['extras','必要なもの'],['categories','費用'],['payments','支払い'],['gifts','ご祝儀']].map(v=>'<button class="tab '+(moneyView===v[0]?'active':'')+'" data-action="money-view" data-id="'+v[0]+'">'+v[1]+'</button>').join('')+'</div>';
  const budget=n(state.budgetTotal),cost=totalForecast(),paid=totalPaid(),gifts=totalGifts();
  if(moneyView==='overview'){
+  h+=financePanel();
   const progressPct=budget?Math.round(cost/budget*100):0;
   h+='<div class="card"><div class="small muted">費用見込み</div><div class="amount">'+yen(cost)+'</div><div class="small muted">全体予算 '+(budget?yen(budget):'未設定')+'　'+btn('予算を設定','budget-total')+'</div><div class="donut-wrap mt"><div class="donut" style="background:conic-gradient(#d99aa8 0 '+Math.min(progressPct,100)+'%,#edf0e9 '+Math.min(progressPct,100)+'% 100%)"><div class="donut-inner"><b>'+progressPct+'%</b><small>予算使用率</small></div></div><div class="legend"><div><span class="small muted">支払済み</span><div class="strong">'+yen(paid)+'</div></div><div><span class="small muted">見込額の未払い</span><div class="strong">'+yen(Math.max(0,cost-paid))+'</div></div><div><span class="small muted">ご祝儀</span><div class="strong">'+yen(gifts)+'</div></div></div></div>'+(budget&&cost>budget?'<div class="notice">予算より '+yen(cost-budget)+' ほど多くなりそう。項目ごとに確認してみよう。</div>':'')+'</div>';
   h+='<div class="metric-grid"><div class="metric"><div class="small muted">契約・見積ベース</div><div class="amount" style="font-size:17px;margin-top:9px">'+yen(cost)+'</div></div><div class="metric" style="background:#fff0f2"><div class="small muted">最終持ち出し見込み</div><div class="amount" style="font-size:17px;margin-top:9px;color:#ad7280">'+yen(Math.max(0,cost-gifts))+'</div></div></div>';
@@ -364,6 +365,7 @@ async function submit(form){
   cloud={config:cfg,room,pushPublicKey:(v.pushPublicKey||'').trim()};localStorage.setItem(CLOUD_KEY,JSON.stringify(cloud));toast('設定を保存しました。接続を確認します');render();connect();return;
  }
  if(type==='comment'){const txt=(v.text||'').trim();if(!txt)return;write('comments',{id:id(),author:nameRole(state.myRole),text:txt,at:Date.now()});dialog.close();toast('ひとことを残しました');return}
+ if(type==='savings'){if(v.savings===''){toast('貯金額を入力してください');return}setSetting('savings',Math.max(0,n(v.savings)));dialog.close();toast('貯金額を保存しました');return}
  if(type==='budget-total'){setSetting('budgetTotal',Math.max(0,n(v.budget)));dialog.close();toast('全体予算を保存しました');return}
  const types={task:'tasks',category:'categories',payment:'payments',gift:'gifts',guest:'guests',table:'tables',role:'roles',timeline:'timeline',vendor:'vendors',idea:'ideas',item:'items',thanks:'thanks',schedule:'schedules',extra:'extras',present:'presents'};
  const col=types[type];if(!col)return;
@@ -444,7 +446,8 @@ async function handleAction(target){
  if(action==='pay-clear'){paymentDateSelected='';render();return}
  if(action==='guest-view'){guestView=uid;render();return}
  if(action==='template'){templateTasks();return}
- if(action==='money-add'){modal('何を追加する？','<div class="stack">'+btn('予算項目を追加','new-category','','light')+btn('支払い予定を追加','new-payment','','light')+btn('ご祝儀を追加','new-gift','','light')+'</div>');return}
+ if(action==='money-add'){modal('何を追加する？','<div class="stack">'+btn('必要なものを追加','new-extra','','light')+btn('予算項目を追加','new-category','','light')+btn('支払い予定を追加','new-payment','','light')+btn('ご祝儀を追加','new-gift','','light')+'</div>');return}
+ if(action==='edit-savings'){modal('現在の貯金額を登録',field('結婚式に使える現在の貯金（円）','savings','number',state.savings??'',true,'min="0"')+'<p class="field-hint">手元の貯金のうち、結婚式に充当できる額を登録してください。ご祝儀や支援金を含めた場合は二重計上しません。</p>','savings');return}
  if(action==='budget-total'){modal('全体予算',field('予算総額（円）','budget','number',state.budgetTotal,true,'min="0"'),'budget-total');return}
  if(action==='comment'){modal('ふたりのひとこと',area('メッセージ','text'),'comment');return}
  if(action==='toggle-task'){const x=state.tasks.find(t=>t.id===uid);if(x){write('tasks',{...x,done:!x.done});if(!x.done){completion();toast('おつかれさま！ひとつ完了 ✿')}}return}

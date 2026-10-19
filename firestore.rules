@@ -14,7 +14,7 @@ service cloud.firestore {
         && request.resource.data.collection in [
           'settings','roles','categories','tasks','payments','gifts','guests',
           'tables','timeline','vendors','ideas','items','thanks','comments',
-          'activity','pushSub'
+          'activity','pushSub','schedules','extras','presents'
         ]
         && request.resource.data.id is string
         && recordId == request.resource.data.collection + '_' + request.resource.data.id

@@ -546,6 +546,7 @@ dialog.addEventListener('click',ev=>{if(ev.target===dialog)dialog.close()});
 window.addEventListener('online',()=>{if(syncEnabled())connect()});
 window.addEventListener('focus',()=>remind());
 document.addEventListener('visibilitychange',()=>{if(!document.hidden)remind()});
+setInterval(()=>{if(!document.hidden)remind()},60000);
 try{cloud=JSON.parse(localStorage.getItem(CLOUD_KEY)||'null')}catch{}
 setupPartnerNotifications({getRoom:()=>cloud?.room||'',getRole:()=>nameRole(state.myRole),toast,modal});
 render();setTimeout(remind,600);

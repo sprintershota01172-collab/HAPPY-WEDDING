@@ -13,7 +13,7 @@ const DEFAULT_CATEGORIES=['会場','衣装','写真・映像','料理','装花',
 const ARRAYS=['roles','categories','tasks','payments','gifts','guests','tables','timeline','vendors','ideas','items','thanks','comments'];
 function defaults(){return {version:1,setup:0,date:'2027-02-20',myRole:'groom',couple:['新郎','新婦'],budgetTotal:0,reminders:false,roles:DEFAULT_ROLES,categories:DEFAULT_CATEGORIES,tasks:[],payments:[],gifts:[],guests:[],tables:[],timeline:[],vendors:[],ideas:[],items:[],thanks:[],comments:[]}}
 function load(){try{const v=JSON.parse(localStorage.getItem(KEY)||'null');if(!v)return defaults();const d=defaults();return {...d,...v,...Object.fromEntries(ARRAYS.map(k=>[k,Array.isArray(v[k])?v[k]:d[k]]))}}catch(e){return defaults()}}
-let state=load(), tab='home', taskRole='all', guestView='list', moneyView='overview', morePage='',selectedGuest='', cloud=null;
+let state=load(), tab='home', taskRole='all', guestView='list', moneyView='overview', paymentMonth=today().slice(0,7),paymentDateSelected='', morePage='',selectedGuest='', cloud=null;
 const app=document.getElementById('main'),dialog=document.getElementById('modal'),modalContent=document.getElementById('modal-content'),toastEl=document.getElementById('toast');
 let toastTimer=0,renderScheduled=false,completionSound=false;
 const $=(s,root=document)=>root.querySelector(s);
@@ -30,7 +30,7 @@ const role=x=>state.roles.find(r=>r.id===x);
 const cat=x=>state.categories.find(c=>c.id===x);
 const nameRole=x=>role(x)?.name||'未担当';
 const badge=(text,cl='')=>'<span class="pill '+cl+'">'+e(text)+'</span>';
-const btn=(text,action,arg='',cl='ghost tiny')=>'<button class="btn '+cl+'" data-action="'+e(action)+'" data-id="'+e(arg)+'">'+text+'</button>';
+const btn=(text,action,arg='',cl='ghost tiny')=>'<button type="button" class="btn '+cl+'" data-action="'+e(action)+'" data-id="'+e(arg)+'">'+text+'</button>';
 function toast(msg){toastEl.textContent=msg;toastEl.classList.add('show');clearTimeout(toastTimer);toastTimer=setTimeout(()=>toastEl.classList.remove('show'),2900)}
 function save(){try{localStorage.setItem(KEY,JSON.stringify(state))}catch(e){toast('保存容量が不足しています。写真を減らしてバックアップしてください。')}}
 function settingsRemote(){return {date:state.date,couple:state.couple,budgetTotal:state.budgetTotal,reminders:state.reminders}}
@@ -85,7 +85,7 @@ function renderHome(){
 }
 function taskCard(t,compact=false){
  const who=role(t.role),sub=t.subtasks||[],subDone=sub.filter(s=>s.done).length;
- return '<div class="item '+(t.done?'done':'')+'"><input class="check" aria-label="'+e(t.title)+'を完了" type="checkbox" data-action="toggle-task" data-id="'+e(t.id)+'" '+(t.done?'checked':'')+'><div class="content"><div class="item-title">'+e(t.title)+'</div><div class="item-sub"><span class="role-dot" style="background:'+e(who?.color||'#ccc')+'"></span> '+e(who?.name||'未担当')+(t.due?' · '+dayLabel(t.due):'')+' '+(overdue(t)?badge('期限を過ぎています','danger'):dueSoon(t)?badge('もうすぐ','warn'):'')+' '+formatPriority(t.priority)+(sub.length?' · '+subDone+'/'+sub.length+' 小項目':'')+'</div></div>'+btn('編集','edit-task',t.id)+'</div>';
+ return '<div class="item '+(t.done?'done':'')+'"><input class="check" aria-label="'+e(t.title)+'を完了" type="checkbox" data-action="toggle-task" data-id="'+e(t.id)+'" '+(t.done?'checked':'')+'><div class="content"><div class="item-title">'+e(t.title)+'</div><div class="item-sub"><span class="role-dot" style="background:'+e(who?.color||'#ccc')+'"></span> '+e(who?.name||'未担当')+(t.due?' · '+dayLabel(t.due):'')+' '+(overdue(t)?badge('期限を過ぎています','danger'):dueSoon(t)?badge('もうすぐ','warn'):'')+' '+formatPriority(t.priority)+(sub.length?' · '+subDone+'/'+sub.length+' 小項目':'')+'</div>'+(sub.length&&!compact?'<div class="subtasks">'+sub.map(x=>'<label><input type="checkbox" data-action="toggle-subtask" data-id="'+e(t.id)+'" data-subid="'+e(x.id)+'" '+(x.done?'checked':'')+'> '+e(x.title)+'</label>').join('')+'</div>':'')+'</div>'+btn('編集','edit-task',t.id)+'</div>';
 }
 function renderTasks(){
  const done=state.tasks.filter(t=>t.done).length;
@@ -100,7 +100,7 @@ function renderTasks(){
  h+='<div class="card">'+state.roles.map(r=>{const all=state.tasks.filter(t=>t.role===r.id);return '<div class="bar-row"><div class="row between"><span><span class="role-dot" style="background:'+e(r.color)+'"></span> '+e(r.name)+'</span><small class="muted">'+all.filter(t=>t.done).length+'/'+all.length+' · '+progress(all)+'%</small></div><div class="bar-track"><span style="width:'+progress(all)+'%;background:'+e(r.color)+'"></span></div></div>'}).join('')+'</div>';
  return h;
 }
-function totalGifts(){return state.gifts.reduce((sum,x)=>sum+n(x.amount),0)}
+function totalGifts(){return state.gifts.reduce((sum,x)=>sum+n(x.amount),0)+state.guests.reduce((sum,x)=>sum+n(x.gift),0)}
 function paidCategory(c){return n(c.manualPaid)+state.payments.filter(p=>p.category===c.id&&p.paid).reduce((s,p)=>s+n(p.amount),0)}
 function totalPaid(){return state.categories.reduce((s,c)=>s+paidCategory(c),0)}
 function forecastCat(c){return n(c.contract)>0?n(c.contract):n(c.estimate)}
@@ -123,16 +123,27 @@ function renderMoney(){
  }
  if(moneyView==='payments'){
   h+='<div class="page-actions mb">'+btn('＋ 支払い予定','new-payment','','primary')+'</div>';
-  const payments=state.payments.slice().sort((a,b)=>(a.due||'9999').localeCompare(b.due||'9999'));
+  h+=paymentCalendar();
+  if(paymentDateSelected)h+='<div class="row between mb"><span class="small muted">'+e(paymentDateSelected)+'の予定</span>'+btn('すべて表示','pay-clear')+'</div>';
+  const payments=state.payments.filter(p=>!paymentDateSelected||p.due===paymentDateSelected).sort((a,b)=>(a.due||'9999').localeCompare(b.due||'9999'));
   h+=payments.length?'<div class="list">'+payments.map(p=>'<div class="item"><input type="checkbox" class="check" aria-label="支払い完了" data-action="toggle-payment" data-id="'+e(p.id)+'" '+(p.paid?'checked':'')+'><div class="content"><div class="item-title">'+e(p.title)+'</div><div class="item-sub">'+e(cat(p.category)?.name||'未分類')+' · '+e(nameRole(p.payer))+' · '+dayLabel(p.due)+' '+(!p.paid&&p.due&&distance(p.due)<0?badge('期限超過','danger'):'')+'</div><div class="strong money">'+yen(p.amount)+'</div></div>'+btn('編集','edit-payment',p.id)+'</div>').join('')+'</div>':empty('手付金・内金・残金などを登録できます。');
   h+='<p class="caption">完了にした支払いは、該当する項目の「支払済み」に自動反映されます。</p>';
  }
  if(moneyView==='gifts'){
   h+='<div class="card"><div class="small muted">ご祝儀・支援金の合計</div><div class="amount">'+yen(gifts)+'</div><div class="small muted">費用見込み − 収入 = '+yen(Math.max(0,cost-gifts))+' の持ち出し見込み</div></div>';
   h+='<div class="page-actions mb">'+btn('＋ ご祝儀を登録','new-gift','','primary')+'</div>';
+  const guestGifts=state.guests.filter(x=>n(x.gift)>0);if(guestGifts.length)h+='<div class="card"><b>ゲスト別に登録したご祝儀</b><div class="small muted">'+guestGifts.map(g=>e(g.name)+' '+yen(g.gift)).join(' · ')+'</div></div>';
   h+=state.gifts.length?'<div class="list">'+state.gifts.map(g=>'<div class="item"><div class="content"><b>'+e(g.source)+'</b><div class="item-sub">'+e(g.note||'')+'</div></div><b>'+yen(g.amount)+'</b>'+btn('編集','edit-gift',g.id)+'</div>').join('')+'</div>':empty('ご祝儀や親御さんからの支援を登録できます。');
+  h+='<p class="caption">ゲスト詳細で入力したご祝儀も自動加算されます。ここに同じご祝儀を入力すると二重計上になるためご注意ください。</p>';
  }
  return h;
+}
+function paymentCalendar(){
+ const [year,month]=paymentMonth.split('-').map(Number),first=new Date(year,month-1,1).getDay(),last=new Date(year,month,0).getDate();
+ const weekdays=['日','月','火','水','木','金','土'];let h='<div class="card"><div class="row between mb">'+btn('‹ 前月','pay-month','-1')+'<b>'+year+'年'+month+'月</b>'+btn('翌月 ›','pay-month','1')+'</div><div class="calendar-grid">'+weekdays.map((d,i)=>'<div class="calendar-weekday '+(i===0?'error':'')+'">'+d+'</div>').join('');
+ for(let i=0;i<first;i++)h+='<div></div>';
+ for(let day=1;day<=last;day++){const dt=paymentMonth+'-'+String(day).padStart(2,'0'),entries=state.payments.filter(p=>p.due===dt),isToday=dt===today();h+='<button type="button" class="calendar-cell '+(isToday?'today ':'')+(paymentDateSelected===dt?'selected':'')+'" data-action="pay-day" data-id="'+dt+'"><b>'+day+'</b>'+(entries.length?'<span class="cal-dot">'+entries.length+'件</span>':'')+'</button>'}
+ return h+'</div><p class="caption">日付を押すと、その日の支払い予定に絞り込めます。</p></div>';
 }
 function barCategory(c){const used=forecastCat(c),budget=n(c.budget);return '<div class="bar-row"><div class="row between small"><span>'+e(c.icon||'♡')+' '+e(c.name)+'</span><span>'+yen(used)+(budget?' / '+yen(budget):'')+'</span></div><div class="bar-track"><span style="width:'+(budget?Math.min(used/budget*100,100):0)+'%;background:'+(budget&&used>budget?'#d88080':e(c.color||'#dba7a0'))+'"></span></div></div>'}
 function renderGuests(){
@@ -311,12 +322,16 @@ async function handleAction(target){
  if(action==='close-modal'){dialog.close();return}
  if(action==='task-filter'){taskRole=uid;render();return}
  if(action==='money-view'){moneyView=uid;render();return}
+ if(action==='pay-month'){const [y,m]=paymentMonth.split('-').map(Number);const d=new Date(y,m-1+n(uid),1);paymentMonth=d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0');paymentDateSelected='';render();return}
+ if(action==='pay-day'){paymentDateSelected=paymentDateSelected===uid?'':uid;render();return}
+ if(action==='pay-clear'){paymentDateSelected='';render();return}
  if(action==='guest-view'){guestView=uid;render();return}
  if(action==='template'){templateTasks();return}
  if(action==='money-add'){modal('何を追加する？','<div class="stack">'+btn('予算項目を追加','new-category','','light')+btn('支払い予定を追加','new-payment','','light')+btn('ご祝儀を追加','new-gift','','light')+'</div>');return}
  if(action==='budget-total'){modal('全体予算',field('予算総額（円）','budget','number',state.budgetTotal,true,'min="0"'),'budget-total');return}
  if(action==='comment'){modal('ふたりのひとこと',area('メッセージ','text'),'comment');return}
  if(action==='toggle-task'){const x=state.tasks.find(t=>t.id===uid);if(x){write('tasks',{...x,done:!x.done});if(!x.done){completion();toast('おつかれさま！ひとつ完了 ✿')}}return}
+ if(action==='toggle-subtask'){const x=state.tasks.find(t=>t.id===uid);if(x){const subId=target.dataset.subid;write('tasks',{...x,subtasks:(x.subtasks||[]).map(a=>a.id===subId?{...a,done:!a.done}:a)})}return}
  if(['toggle-payment','toggle-item','toggle-thanks'].includes(action)){const c={'toggle-payment':'payments','toggle-item':'items','toggle-thanks':'thanks'}[action],x=state[c].find(t=>t.id===uid);if(x){write(c,{...x,paid:action==='toggle-payment'?!x.paid:x.paid,done:action==='toggle-payment'?x.done:!x.done});if(action!=='toggle-payment'&&!x.done)completion()}return}
  if(action.startsWith('new-')||action.startsWith('edit-')){modalEdit(action.split('-')[1],action.startsWith('edit-')?uid:'');return}
  if(action==='delete'){
@@ -344,7 +359,7 @@ function assignGuest(uid,tableId){
  write('guests',{...g,tableId});selectedGuest='';toast('席次表を更新しました');
 }
 document.addEventListener('click',ev=>{
- const t=ev.target.closest('[data-action]');if(t){if(t.dataset.action==='toggle-task'||t.dataset.action==='toggle-item'||t.dataset.action==='toggle-thanks'||t.dataset.action==='toggle-payment')return;ev.preventDefault();handleAction(t);return}
+ const t=ev.target.closest('[data-action]');if(t){if(['toggle-task','toggle-subtask','toggle-item','toggle-thanks','toggle-payment'].includes(t.dataset.action))return;ev.preventDefault();handleAction(t);return}
  const seat=ev.target.closest('[data-drop-table]');
  if(seat&&selectedGuest){assignGuest(selectedGuest,seat.dataset.dropTable);return}
 });

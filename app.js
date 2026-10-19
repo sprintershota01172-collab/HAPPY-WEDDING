@@ -13,7 +13,7 @@ const DEFAULT_CATEGORIES=['会場','衣装','写真・映像','料理','装花',
 const ARRAYS=['roles','categories','tasks','payments','gifts','guests','tables','timeline','vendors','ideas','items','thanks','comments'];
 function defaults(){return {version:1,setup:0,date:'2027-02-20',myRole:'groom',couple:['新郎','新婦'],budgetTotal:0,reminders:false,roles:DEFAULT_ROLES,categories:DEFAULT_CATEGORIES,tasks:[],payments:[],gifts:[],guests:[],tables:[],timeline:[],vendors:[],ideas:[],items:[],thanks:[],comments:[]}}
 function load(){try{const v=JSON.parse(localStorage.getItem(KEY)||'null');if(!v)return defaults();const d=defaults();return {...d,...v,...Object.fromEntries(ARRAYS.map(k=>[k,Array.isArray(v[k])?v[k]:d[k]]))}}catch(e){return defaults()}}
-let state=load(), tab='home', taskRole='all', guestView='list', moneyView='overview', paymentMonth=today().slice(0,7),paymentDateSelected='', morePage='',selectedGuest='', cloud=null;
+let state=load(), tab='home', taskRole='all', guestView='list', moneyView='overview', paymentMonth='',paymentDateSelected='', morePage='',selectedGuest='', cloud=null;
 const app=document.getElementById('main'),dialog=document.getElementById('modal'),modalContent=document.getElementById('modal-content'),toastEl=document.getElementById('toast');
 let toastTimer=0,renderScheduled=false,completionSound=false;
 const $=(s,root=document)=>root.querySelector(s);
@@ -23,6 +23,7 @@ const n=x=>Number(x)||0;
 const yen=x=>'¥'+Math.round(n(x)).toLocaleString('ja-JP');
 const id=()=> (crypto.randomUUID?.()||('x'+Date.now().toString(36)+Math.random().toString(36).slice(2)));
 const today=()=>{const d=new Date();return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0')};
+paymentMonth=today().slice(0,7);
 const parseDate=s=>new Date((s||today())+'T12:00:00');
 const distance=s=>Math.round((parseDate(s)-parseDate(today()))/86400000);
 const dayLabel=s=>s?new Intl.DateTimeFormat('ja-JP',{month:'numeric',day:'numeric'}).format(parseDate(s)):'未設定';

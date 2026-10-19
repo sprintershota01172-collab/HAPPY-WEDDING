@@ -349,8 +349,81 @@ function selectField(name,label,opts,value){return choices(label,name,opts.map(x
 function checkField(label,name,value){return '<label class="row field"><input type="checkbox" name="'+e(name)+'" '+(value?'checked':'')+'> '+e(label)+'</label>'}
 function modal(title,body,formType='',uid=''){
  dialog.classList.toggle('guest-dialog',formType==='guest'||formType==='present');
-  modalContent.innerHTML='<div class="modal-head"><h2>'+title+'</h2><button class="close-modal" type="button" data-action="close-modal" aria-label="閉じる">×</button></div><div class="modal-body">'+(formType?'<form '+(formType==='guest'||formType==='present'?'class="guest-editor" novalidate ':'')+'data-form="'+formType+'" data-id="'+e(uid)+'">'+body+'<div class="form-actions">'+(uid?'<button type="button" class="btn danger" data-action="delete" data-id="'+e(uid)+'" data-type="'+e(formType)+'">削除</button>':'')+'<button type="button" class="btn ghost" data-action="close-modal">キャンセル</button><button class="btn primary" type="submit">保存する</button></div></form>':body)+'</div>';dialog.showModal();
+  modalContent.innerHTML='<div class="modal-head"><h2>'+title+'</h2><button class="close-modal" type="button" data-action="close-modal" aria-label="閉じる">×</button></div><div class="modal-body">'+(formType?'<form '+(formType==='guest'||formType==='present'?'class="guest-editor" novalidate ':'')+'data-form="'+formType+'" data-id="'+e(uid)+'">'+body+'<div class="form-actions">'+(uid?'<button type="button" class="btn danger" data-action="delete" data-id="'+e(uid)+'" data-type="'+e(formType)+'">削除</button>':'')+'<button type="button" class="btn ghost" data-action="close-modal">キャンセル</button><button class="btn primary" type="submit">保存する</button></div></form>':body)+'</div>';dialog.showModal();initializeModalPager();
 }
+
+let editorPages=null;
+function showEditorPage(index){
+ if(!editorPages)return;
+ const at=Math.max(0,Math.min(editorPages.pages.length-1,index));
+ editorPages.index=at;
+ editorPages.pages.forEach((p,i)=>p.hidden=i!==at);
+ const prev=dialog.querySelector('[data-action="form-prev"]');
+ const next=dialog.querySelector('[data-action="form-next"]');
+ if(prev)prev.disabled=at===0;
+ if(next)next.hidden=at===editorPages.pages.length-1;
+ const save=editorPages.form.querySelector('.form-actions button[type="submit"]');
+ if(save)save.hidden=at!==editorPages.pages.length-1;
+ const count=dialog.querySelector('.editor-page-count');
+ if(count)count.textContent=(at+1)+' / '+editorPages.pages.length;
+}
+function verifyEditorPage(index){
+ if(!editorPages)return true;
+ const fields=Array.from(editorPages.pages[index]?.querySelectorAll('[required]')||[]);
+ const invalid=fields.find(el=>!el.checkValidity());
+ if(!invalid)return true;
+ try{invalid.focus({preventScroll:true})}catch{}
+ toast('必須項目を入力してください');
+ return false;
+}
+function initializeModalPager(){
+ editorPages=null;
+ const form=dialog.querySelector('form[data-form]');
+ if(!form||form.classList.contains('guest-editor'))return;
+ const actions=form.querySelector('.form-actions');
+ if(!actions)return;
+ const fields=Array.from(form.children).filter(x=>x!==actions);
+ if(fields.length<=2)return;
+ dialog.classList.add('editor-dialog');
+ form.classList.add('paged-editor');
+ form.noValidate=true;
+ const stage=document.createElement('div');
+ stage.className='editor-stage';
+ const pageNav=document.createElement('div');
+ pageNav.className='editor-pages';
+ pageNav.innerHTML='<button type="button" class="btn ghost tiny" data-action="form-prev">‹ 戻る</button>'
+  +'<span class="editor-page-count"></span>'
+  +'<button type="button" class="btn ghost tiny" data-action="form-next">次へ ›</button>';
+ const pages=[];
+ let current=document.createElement('div'),units=0;
+ current.className='editor-page';
+ const limit=innerHeight<680?2.7:3.7;
+ for(const field of fields){
+  const weight=field.matches('.form-grid')?1.6
+   :field.matches('.attachments')?2.5
+   :field.querySelector('textarea')?1.65
+   :field.matches('.field-hint,.caption')?.5:1;
+  if(units+weight>limit&&units>0){
+   pages.push(current);current=document.createElement('div');current.className='editor-page';units=0;
+  }
+  current.appendChild(field);units+=weight;
+ }
+ pages.push(current);
+ pages.forEach(p=>stage.appendChild(p));
+ form.insertBefore(stage,actions);
+ if(pages.length>1)form.insertBefore(pageNav,actions);
+ editorPages={form,pages,index:0};
+ showEditorPage(0);
+}
+function closeModal(){
+ if(!dialog.open)return;
+ const focused=document.activeElement;
+ if(focused&&dialog.contains(focused))focused.blur();
+ dialog.close();
+ editorPages=null;
+ dialog.classList.remove('editor-dialog');
+}
+
 function modalEdit(type,uid=''){
  const plural={task:'tasks',category:'categories',payment:'payments',gift:'gifts',guest:'guests',table:'tables',role:'roles',timeline:'timeline',vendor:'vendors',idea:'ideas',item:'items',thanks:'thanks',schedule:'schedules',extra:'extras',present:'presents'};
  const c=plural[type],x=state[c]?.find(v=>v.id===uid)||{};
@@ -441,9 +514,9 @@ async function submit(form){
   const room=v.room.trim();if(!/^[a-f0-9]{48}$/.test(room)){toast('共有コードは48文字の小文字英数字です');return}
   cloud={config:cfg,room,pushPublicKey:(v.pushPublicKey||'').trim()};localStorage.setItem(CLOUD_KEY,JSON.stringify(cloud));toast('設定を保存しました。接続を確認します');render();connect();return;
  }
- if(type==='comment'){const txt=(v.text||'').trim();if(!txt)return;write('comments',{id:id(),author:nameRole(state.myRole),text:txt,at:Date.now()});dialog.close();toast('ひとことを残しました');return}
- if(type==='savings'){if(v.savings===''){toast('貯金額を入力してください');return}setSetting('savings',Math.max(0,n(v.savings)));dialog.close();toast('貯金額を保存しました');return}
- if(type==='budget-total'){setSetting('budgetTotal',Math.max(0,n(v.budget)));dialog.close();toast('全体予算を保存しました');return}
+ if(type==='comment'){const txt=(v.text||'').trim();if(!txt)return;write('comments',{id:id(),author:nameRole(state.myRole),text:txt,at:Date.now()});closeModal();toast('ひとことを残しました');return}
+ if(type==='savings'){if(v.savings===''){toast('貯金額を入力してください');return}setSetting('savings',Math.max(0,n(v.savings)));closeModal();toast('貯金額を保存しました');return}
+ if(type==='budget-total'){setSetting('budgetTotal',Math.max(0,n(v.budget)));closeModal();toast('全体予算を保存しました');return}
  const types={task:'tasks',category:'categories',payment:'payments',gift:'gifts',guest:'guests',table:'tables',role:'roles',timeline:'timeline',vendor:'vendors',idea:'ideas',item:'items',thanks:'thanks',schedule:'schedules',extra:'extras',present:'presents'};
  const col=types[type];if(!col)return;
  const old=state[col].find(x=>x.id===uid)||{};
@@ -467,7 +540,7 @@ async function submit(form){
  if(type==='extra'){item.amount=Math.max(0,n(v.amount));item.paid=flBool(f,'paid')}
  if(type==='present'){item.value=Math.max(0,n(v.value));item.returnValue=Math.max(0,n(v.returnValue));item.returned=flBool(f,'returned')}
  if(type==='task'||type==='idea'){try{const file=f.get('photo');if(file&&file.size)item.photo=await imageData(file)}catch(err){toast(err.message);return}}
- write(col,item);dialog.close();toast(uid?'更新しました':'追加しました');
+ write(col,item);closeModal();toast(uid?'更新しました':'追加しました');
 }
 function completion(){for(let i=0;i<19;i++){const x=document.createElement('span');x.className='petal';x.textContent=i%3===0?'♡':'✿';x.style.left=Math.round(Math.random()*100)+'vw';x.style.color=i%2?'#e3adba':'#afd6c3';x.style.setProperty('--dx',(Math.random()*160-80)+'px');x.style.animationDelay=(Math.random()*.5)+'s';document.getElementById('confetti').append(x);setTimeout(()=>x.remove(),2500)}}
 function templateTasks(){
@@ -549,9 +622,16 @@ async function handleAction(target){
  const action=target.dataset.action,uid=target.dataset.id;
  if(!action)return;
  if(action==='pager-prev'||action==='pager-next'){if(activePager)presentPage(activePager.index+(action==='pager-next'?1:-1));return}
+ if(action==='form-prev'||action==='form-next'){
+  if(editorPages){
+   if(action==='form-prev')showEditorPage(editorPages.index-1);
+   else if(verifyEditorPage(editorPages.index))showEditorPage(editorPages.index+1);
+  }
+  return;
+ }
  if(action==='nav'){chooseTab(uid);return}
  if(action==='more'){tab='more';morePage=uid;render();window.scrollTo(0,0);return}
- if(action==='close-modal'){dialog.close();return}
+ if(action==='close-modal'){closeModal();return}
  if(action==='guest-step'){showGuestStep(uid);return}
  if(action==='show-deadlines'){const alerts=reminderCandidates();modal('期限が近い予定',alerts.length?'<div class="activity-list">'+alerts.map(x=>'<div class="activity-row"><b>'+e(x.kind)+'</b>　'+e(x.title)+'<time>'+e(x.date)+(distance(x.date)<0?'・期限超過':'')+'</time></div>').join('')+'</div>':empty('確認が必要な予定はありません。'));return}
  if(action==='partner-push'){await enablePartnerPush(cloud?.pushPublicKey||'');return}
@@ -579,7 +659,7 @@ async function handleAction(target){
   if(!window.confirm('削除しますか？ 元に戻せません。'))return;
   if(c==='roles'&&state.myRole===uid)state.myRole=state.roles.find(r=>r.id!==uid)?.id||'';
   if(c==='tables')for(const g of state.guests.filter(g=>g.tableId===uid))write('guests',{...g,tableId:''},{quiet:true});
-  erase(c,uid);dialog.close();toast('削除しました');return;
+  erase(c,uid);closeModal();toast('削除しました');return;
  }
  if(action==='set-my-role'){state.myRole=uid;save();render();toast('自分の担当を変更しました');return}
  if(action==='pick-guest'){selectedGuest=uid;render();return}
@@ -612,12 +692,14 @@ document.addEventListener('change',async ev=>{
   try{const obj=JSON.parse((await t.files[0].text()).replace(/^\uFEFF/,''));if(!obj||!Array.isArray(obj.tasks)||!Array.isArray(obj.roles)||!Array.isArray(obj.guests)||!Array.isArray(obj.categories))throw Error('バックアップ形式が不正です');if(!confirm('現在の端末データをバックアップ内容で置き換えますか？'))return;state={...defaults(),...obj};save();render();toast('データを復元しました')}catch(err){toast('読み込みに失敗: '+err.message)}
  }
 });
-document.addEventListener('submit',async ev=>{const f=ev.target.closest('form[data-form]');if(!f)return;ev.preventDefault();const b=f.querySelector('button[type=submit],button:not([type])');if(b)b.disabled=true;try{await submit(f)}catch(err){console.error(err);toast('保存できませんでした: '+err.message)}finally{if(b)b.disabled=false}});
+document.addEventListener('submit',async ev=>{const f=ev.target.closest('form[data-form]');if(!f)return;ev.preventDefault();const b=f.querySelector('button[type=submit],button:not([type])');if(b)b.disabled=true;try{
+ if(editorPages){const allValid=editorPages.pages.every((p,i)=>{const bad=Array.from(p.querySelectorAll('[required]')).some(field=>!field.checkValidity());if(bad){showEditorPage(i);verifyEditorPage(i);return false}return true});if(!allValid)return}
+ await submit(f)}catch(err){console.error(err);toast('保存できませんでした: '+err.message)}finally{if(b)b.disabled=false}});
 document.addEventListener('dragstart',ev=>{const s=ev.target.closest('[data-guest]');if(s)ev.dataTransfer.setData('text/plain',s.dataset.guest)});
 document.addEventListener('dragover',ev=>{const s=ev.target.closest('[data-drop-table]');if(s)ev.preventDefault()});
 document.addEventListener('drop',ev=>{const s=ev.target.closest('[data-drop-table]');if(s){ev.preventDefault();const g=ev.dataTransfer.getData('text/plain');if(g)assignGuest(g,s.dataset.dropTable)}});
 document.getElementById('header-settings').addEventListener('click',()=>{tab='more';morePage='settings';render()});
-dialog.addEventListener('click',ev=>{if(ev.target===dialog)dialog.close()});
+dialog.addEventListener('click',ev=>{if(ev.target===dialog)closeModal()});
 window.addEventListener('online',()=>{if(syncEnabled())connect()});
 window.addEventListener('focus',()=>remind());
 document.addEventListener('visibilitychange',()=>{if(!document.hidden)remind()});

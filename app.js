@@ -11,7 +11,7 @@ const DEFAULT_ROLES=[
 ];
 const DEFAULT_CATEGORIES=['会場','衣装','写真・映像','料理','装花','引出物','ペーパーアイテム','演出','二次会','新婚旅行'].map((name,i)=>({id:'c'+i,name,icon:['⌂','♕','▧','♨','✿','🎁','✉','♫','♡','✈'][i],budget:0,estimate:0,contract:0,manualPaid:0,color:COLORS[i%COLORS.length]}));
 const ARRAYS=['roles','categories','tasks','payments','gifts','guests','tables','timeline','vendors','ideas','items','thanks','comments'];
-function defaults(){return {version:1,setup:0,date:'2027-02-20',myRole:'groom',couple:['新郎','新婦'],budgetTotal:0,reminders:false,roles:DEFAULT_ROLES,categories:DEFAULT_CATEGORIES,tasks:[],payments:[],gifts:[],guests:[],tables:[],timeline:[],vendors:[],ideas:[],items:[],thanks:[],comments:[]}}
+function defaults(){return {version:1,setup:0,date:'',myRole:'groom',couple:['新郎','新婦'],budgetTotal:0,reminders:false,roles:DEFAULT_ROLES,categories:DEFAULT_CATEGORIES,tasks:[],payments:[],gifts:[],guests:[],tables:[],timeline:[],vendors:[],ideas:[],items:[],thanks:[],comments:[]}}
 function load(){try{const v=JSON.parse(localStorage.getItem(KEY)||'null');if(!v)return defaults();const d=defaults();return {...d,...v,...Object.fromEntries(ARRAYS.map(k=>[k,Array.isArray(v[k])?v[k]:d[k]]))}}catch(e){return defaults()}}
 let state=load(), tab='home', taskRole='all', guestView='list', moneyView='overview', paymentMonth='',paymentDateSelected='', morePage='',selectedGuest='', cloud=null;
 const app=document.getElementById('main'),dialog=document.getElementById('modal'),modalContent=document.getElementById('modal-content'),toastEl=document.getElementById('toast');
@@ -59,7 +59,7 @@ async function connect(){if(!syncEnabled())return;try{await startSync(cloud.conf
  if(empty){for(const c of ARRAYS)for(const item of state[c])queueChange(c,item.id,item);queueChange('settings','main',settingsRemote())}
  toast(empty?'共有ルームを作成しました':'共有ルームに接続しました');
  });}catch(err){status('error');console.error(err);toast('クラウド接続を確認してください: '+err.message)}}
-function chooseTab(t){tab=t;morePage='';if(t==='home')moneyView='overview';render();app.scrollTop=0;window.scrollTo({top:0,behavior:'instant'})}
+function chooseTab(t){tab=t;morePage='';if(t==='home')moneyView='overview';render()}
 function header(title,right='',desc=''){return '<div class="page-head"><h1>'+e(title)+'</h1>'+right+'</div>'+(desc?'<div class="page-desc">'+e(desc)+'</div>':'')}
 function section(title,right=''){return '<div class="section-title"><h2>'+title+'</h2>'+right+'</div>'}
 function empty(msg){return '<div class="empty"><div class="flower">✿</div>'+msg+'</div>'}
@@ -69,8 +69,23 @@ function overdue(x){return x.due&&!x.done&&distance(x.due)<0}
 function dueSoon(x){return x.due&&!x.done&&distance(x.due)>=0&&distance(x.due)<=7}
 function render(){const bottomNav=document.querySelector('.bottom-nav');if(bottomNav)bottomNav.hidden=!state.setup;document.querySelectorAll('.bottom-nav button').forEach(b=>b.classList.toggle('active',b.dataset.tab===tab));$('#connection').title=syncEnabled()?'共有コード設定済み':'端末に保存';if(!state.setup){app.innerHTML=renderSetup();return}
  app.innerHTML=tab==='home'?renderHome():tab==='tasks'?renderTasks():tab==='money'?renderMoney():tab==='guests'?renderGuests():renderMore();
+ organizeScreen();
 }
-function renderSetup(){const step=state.setup===1?2:1;return '<div class="setup"><div class="setup-flower">✿ ♡ ✿</div><h1>Happy Wedding</h1><p>ふたりの特別な一日まで。<br>準備も一緒に楽しもう。</p><div class="card">'+(step===1?'<div class="eyebrow">STEP 1 / 2</div><h2>挙式日はいつ？</h2><form data-form="setup1">'+field('挙式日','date','date',state.date,true)+'<button class="btn primary btn-wide">次へ →</button></form>':'<div class="eyebrow">STEP 2 / 2</div><h2>あなたの役割は？</h2><form data-form="setup2">'+selectField('role','あなたの役割',state.roles,state.myRole)+'<button class="btn primary btn-wide">はじめる ♡</button></form>')+'</div><p>あとから設定を変更できます。<br>データは自動でこの端末に保存されます。</p></div>'}
+
+/** Keep the app shell fixed. Only the detail panel has vertical scrolling. */
+function organizeScreen(){
+ const children=Array.from(app.children);
+ if(!children.length)return;
+ const pinCount=tab==='home'?2:tab==='tasks'?5:tab==='guests'?4:tab==='money'?3:morePage?1:2;
+ const pinned=document.createElement('div'),panel=document.createElement('section');
+ pinned.className='screen-fixed';
+ panel.className='screen-panel';
+ panel.tabIndex=0;
+ panel.setAttribute('aria-label',({home:'ホームの詳細',tasks:'タスク一覧',money:'予算・支払いの詳細',guests:'ゲスト一覧・席次表',more:'その他の項目'})[tab]);
+ children.forEach((child,i)=>(i<pinCount?pinned:panel).append(child));
+ app.replaceChildren(pinned,panel);
+}
+function renderSetup(){const step=state.setup===1?2:1;return '<div class="setup"><div class="setup-flower">✿ ♡ ✿</div><h1>Happy Wedding</h1><p>ふたりの特別な一日まで。<br>準備も一緒に楽しもう。</p><div class="card">'+(step===1?'<div class="eyebrow">STEP 1 / 2</div><h2>挙式日はいつ？</h2><form data-form="setup1">'+field('挙式日','date','date',state.date||'',true)+'<button class="btn primary btn-wide">次へ →</button></form>':'<div class="eyebrow">STEP 2 / 2</div><h2>あなたの役割は？</h2><form data-form="setup2">'+selectField('role','あなたの役割',state.roles,state.myRole)+'<button class="btn primary btn-wide">はじめる ♡</button></form>')+'</div><p>あとから設定を変更できます。<br>データは自動でこの端末に保存されます。</p></div>'}
 function renderHome(){
  const left=distance(state.date),done=state.tasks.filter(t=>t.done).length,total=state.tasks.length,paid=totalPaid(), forecast=totalForecast();
  const near=state.tasks.filter(x=>!x.done&&x.due).sort((a,b)=>a.due.localeCompare(b.due)).slice(0,4);
@@ -246,7 +261,7 @@ function values(form){const f=new FormData(form),v={};for(const [k,val] of f.ent
 function flBool(f,k){return f.has(k)}
 async function submit(form){
  const type=form.dataset.form,uid=form.dataset.id||'',f=new FormData(form),v=values(form);
- if(type==='setup1'){state.date=v.date;state.setup=1;save();render();return}
+ if(type==='setup1'){if(!v.date){toast('挙式日を選択してください');return}state.date=v.date;state.setup=1;save();render();return}
  if(type==='setup2'){state.myRole=v.role;state.setup=2;save();render();return}
  if(type==='settings'){state.date=v.date;state.couple=[v.couple0.trim()||'新郎',v.couple1.trim()||'新婦'];save();if(syncEnabled())queueChange('settings','main',settingsRemote());toast('基本設定を保存しました');render();return}
  if(type==='sync'){

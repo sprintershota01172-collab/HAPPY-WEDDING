@@ -13,7 +13,8 @@ service cloud.firestore {
         && request.resource.data.keys().hasOnly(['collection', 'id', 'value', 'deleted', 'updatedAt'])
         && request.resource.data.collection in [
           'settings','roles','categories','tasks','payments','gifts','guests',
-          'tables','timeline','vendors','ideas','items','thanks','comments'
+          'tables','timeline','vendors','ideas','items','thanks','comments',
+          'activity','pushSub'
         ]
         && request.resource.data.id is string
         && recordId == request.resource.data.collection + '_' + request.resource.data.id

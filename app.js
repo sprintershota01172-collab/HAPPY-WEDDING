@@ -11,8 +11,8 @@ const DEFAULT_ROLES=[
  {id:'host',name:'司会・友人幹事',color:COLORS[4]},{id:'planner',name:'プランナー',color:COLORS[5]}
 ];
 const DEFAULT_CATEGORIES=['会場','衣装','写真・映像','料理','装花','引出物','ペーパーアイテム','演出','二次会','新婚旅行'].map((name,i)=>({id:'c'+i,name,icon:['⌂','♕','▧','♨','✿','🎁','✉','♫','♡','✈'][i],budget:0,estimate:0,contract:0,manualPaid:0,color:COLORS[i%COLORS.length]}));
-const ARRAYS=['roles','categories','tasks','payments','gifts','guests','tables','timeline','vendors','ideas','items','thanks','comments','schedules','extras','presents'];
-function defaults(){return {version:1,setup:0,date:'',myRole:'groom',couple:['新郎','新婦'],budgetTotal:0,savings:null,reminders:false,reminderDays:3,roles:DEFAULT_ROLES,categories:DEFAULT_CATEGORIES,tasks:[],payments:[],gifts:[],guests:[],tables:[],timeline:[],vendors:[],ideas:[],items:[],thanks:[],comments:[],schedules:[],extras:[],presents:[]}}
+const ARRAYS=['roles','categories','tasks','payments','gifts','guests','tables','timeline','vendors','ideas','items','thanks','comments','schedules','extras','presents','savingsAccounts'];
+function defaults(){return {version:1,setup:0,date:'',myRole:'groom',couple:['新郎','新婦'],budgetTotal:0,savings:null,savingsLedgerInitialized:false,reminders:false,reminderDays:3,roles:DEFAULT_ROLES,categories:DEFAULT_CATEGORIES,tasks:[],payments:[],gifts:[],guests:[],tables:[],timeline:[],vendors:[],ideas:[],items:[],thanks:[],comments:[],schedules:[],extras:[],presents:[],savingsAccounts:[]}}
 function load(){try{const v=JSON.parse(localStorage.getItem(KEY)||'null');if(!v)return defaults();const d=defaults();return {...d,...v,...Object.fromEntries(ARRAYS.map(k=>[k,Array.isArray(v[k])?v[k]:d[k]]))}}catch(e){return defaults()}}
 let state=load(), tab='home', taskRole='all', guestView='list', moneyView='overview', paymentMonth='',paymentDateSelected='', morePage='',presentView='received',selectedGuest='', cloud=null;
 const app=document.getElementById('main'),dialog=document.getElementById('modal'),modalContent=document.getElementById('modal-content'),toastEl=document.getElementById('toast');
@@ -37,25 +37,44 @@ const badge=(text,cl='')=>'<span class="pill '+cl+'">'+e(text)+'</span>';
 const btn=(text,action,arg='',cl='ghost tiny')=>'<button type="button" class="btn '+cl+'" data-action="'+e(action)+'" data-id="'+e(arg)+'">'+text+'</button>';
 function toast(msg){toastEl.textContent=msg;toastEl.classList.add('show');clearTimeout(toastTimer);toastTimer=setTimeout(()=>toastEl.classList.remove('show'),2900)}
 function save(){try{localStorage.setItem(KEY,JSON.stringify(state))}catch(e){toast('保存容量が不足しています。写真を減らしてバックアップしてください。')}}
-function settingsRemote(){return {date:state.date,couple:state.couple,budgetTotal:state.budgetTotal,savings:state.savings,reminders:state.reminders,reminderDays:state.reminderDays}}
+function settingsRemote(){return {date:state.date,couple:state.couple,budgetTotal:state.budgetTotal,savings:state.savings,savingsLedgerInitialized:state.savingsLedgerInitialized,reminders:state.reminders,reminderDays:state.reminderDays}}
 function setSetting(key,value){state[key]=value;save();if(syncEnabled())queueChange('settings','main',settingsRemote());announcePartnerChange('settings');render()}
 function syncEnabled(){return Boolean(cloud?.config?.apiKey&&cloud?.room)}
 function write(collection,item,opt={}){
  if(!ARRAYS.includes(collection))return;
  const idx=state[collection].findIndex(x=>x.id===item.id);
  if(idx<0)state[collection].push(item);else state[collection][idx]=item;
- save();if(syncEnabled())queueChange(collection,item.id,item);
+ if(collection==='savingsAccounts'){state.savingsLedgerInitialized=true;state.savings=state.savingsAccounts.reduce((v,x)=>v+Math.max(0,n(x.amount)),0)}
+ save();
+ if(syncEnabled()){
+  queueChange(collection,item.id,item);
+  if(collection==='savingsAccounts')queueChange('settings','main',settingsRemote());
+ }
  if(!opt.quiet){announcePartnerChange(collection,idx<0?'追加':item.done?'完了':'更新');render()}
 }
-function erase(collection,uid){state[collection]=state[collection].filter(x=>x.id!==uid);save();if(syncEnabled())queueChange(collection,uid,null,true);announcePartnerChange(collection,'削除');render()}
+function erase(collection,uid){
+ state[collection]=state[collection].filter(x=>x.id!==uid);
+ if(collection==='savingsAccounts'){state.savingsLedgerInitialized=true;state.savings=state.savingsAccounts.reduce((v,x)=>v+Math.max(0,n(x.amount)),0)}
+ save();
+ if(syncEnabled()){queueChange(collection,uid,null,true);if(collection==='savingsAccounts')queueChange('settings','main',settingsRemote())}
+ announcePartnerChange(collection,'削除');render();
+}
 function remote(entry,meta={}){
  if(entry.collection==='activity'){receivePartnerActivity(entry,meta);return}
  if(entry.collection==='pushSub')return;
- if(entry.collection==='settings'){Object.assign(state,entry.value||{});save();scheduleRender();return}
+ if(entry.collection==='settings'){
+ Object.assign(state,entry.value||{});
+ if(state.savingsAccounts.length)state.savings=state.savingsAccounts.reduce((v,x)=>v+Math.max(0,n(x.amount)),0);
+ save();scheduleRender();return
+}
  if(!ARRAYS.includes(entry.collection))return;
  const list=state[entry.collection],i=list.findIndex(x=>x.id===entry.id);
  if(entry.deleted){if(i>=0)list.splice(i,1)}
  else if(entry.value){if(i>=0)list[i]=entry.value;else list.push(entry.value)}
+ if(entry.collection==='savingsAccounts'){
+  state.savingsLedgerInitialized=true;
+  state.savings=state.savingsAccounts.reduce((v,x)=>v+Math.max(0,n(x.amount)),0)
+ }
  save();scheduleRender();
 }
 function scheduleRender(){if(renderScheduled)return;renderScheduled=true;requestAnimationFrame(()=>{renderScheduled=false;if(!dialog.open)render()})}
@@ -227,21 +246,76 @@ function honeymoonPanel(){
   +'<p class="caption">新婚旅行費は結婚式の予算とは分け、必要資金の計算には含めます。支払いタブとの二重計上にご注意ください。</p></div>';
 }
 
+
+/* Preserve the former single savings balance until the first account edit. */
+const LEGACY_SAVINGS_ID='legacy-savings-v1';
+function savingRecords(){
+ if(state.savingsAccounts.length)return state.savingsAccounts;
+ if(!state.savingsLedgerInitialized&&state.savings!==null&&state.savings!==undefined&&state.savings!=='')
+  return [{id:LEGACY_SAVINGS_ID,owner:'未分類',purpose:'用途未設定',bank:'口座未設定',account:'',
+   amount:Math.max(0,n(state.savings)),available:true,legacy:true}];
+ return [];
+}
+function savingsTotals(){
+ const entries=savingRecords();
+ return {entries,total:entries.reduce((v,x)=>v+Math.max(0,n(x.amount)),0),
+  usable:entries.filter(x=>x.available!==false).reduce((v,x)=>v+Math.max(0,n(x.amount)),0),
+  registered:entries.length>0||state.savingsLedgerInitialized};
+}
+function savingsRows(){
+ const entries=savingRecords();
+ if(!entries.length)return empty('貯金の持ち主・銀行・用途を登録すると一覧表示されます。');
+ return '<div class="list savings-list">'+entries.map(x=>
+  '<div class="item saving-row"><div class="content"><b class="item-title">'+e(x.owner||'持ち主未設定')+'</b>'
+  +'<span class="saving-purpose">'+e(x.purpose||'用途未設定')+'</span>'
+  +'<div class="item-sub">'+e(x.bank||'金融機関未設定')+(x.account?' · '+e(x.account):'')+'</div>'
+  +'<div class="item-sub">'+(x.available===false?'資金計算の対象外':'結婚式・旅行の資金に計上')+'</div></div>'
+  +'<div class="saving-right"><strong>'+yen(x.amount)+'</strong>'+btn(x.legacy?'分類':'編集','edit-saving',x.id,'ghost tiny')+'</div></div>'
+ ).join('')+'</div>';
+}
+function savingsAccountPage(){
+ const t=savingsTotals();
+ return '<div class="savings-account-page"><div class="row between savings-heading"><b>貯金の内訳</b>'
+ +btn('← 資金に戻る','money-view','overview','ghost tiny')+'</div>'
+ +'<div class="savings-account-top"><div><span>すべての貯金</span><strong>'+yen(t.total)+'</strong></div>'
+ +'<div><span>式・旅行に使える額</span><strong>'+yen(t.usable)+'</strong></div></div>'
+ +'<div class="page-actions">'+btn('＋ 貯金・口座を追加','new-saving','','primary')+'</div>'
+ +savingsRows()+'<p class="caption">銀行名・口座の呼び名のみ登録してください。口座番号・暗証番号は不要です。</p></div>';
+}
+function savingEditor(uid=''){
+ const x=savingRecords().find(x=>x.id===uid)||{};
+ const suggestions=(name,values)=>'<datalist id="'+name+'">'+values.map(x=>'<option value="'+e(x)+'"></option>').join('')+'</datalist>';
+ const fields='<div class="field"><label for="saving-owner">誰の貯金？</label>'
+  +'<input id="saving-owner" name="owner" list="saving-owner-list" value="'+e(x.owner==='未分類'?'':x.owner||'')+'" placeholder="例：新郎／新婦／共同" required autocomplete="off">'
+  +suggestions('saving-owner-list',['新郎','新婦','共同','親・家族'])+'</div>'
+  +'<div class="field"><label for="saving-purpose">何のためのお金？</label>'
+  +'<input id="saving-purpose" name="purpose" list="saving-purpose-list" value="'+e(x.purpose==='用途未設定'?'':x.purpose||'')+'" placeholder="例：結婚式／新婚旅行" required autocomplete="off">'
+  +suggestions('saving-purpose-list',['結婚式','新婚旅行','結婚式・新婚旅行','共有貯金','生活費','生活防衛資金','その他'])+'</div>'
+  +field('銀行・金融機関','bank','text',x.bank==='口座未設定'?'':x.bank||'',true,'autocomplete="off" placeholder="例：楽天銀行、現金"')
+  +field('口座名・ニックネーム','account','text',x.account||'',false,'autocomplete="off" placeholder="例：普通預金・共同口座"')
+  +field('現在の残高（円）','amount','number',x.amount??'',true,'min="0" inputmode="numeric"')
+  +checkField('結婚式・新婚旅行に使えるお金として計算','available',x.available!==false)
+  +'<p class="field-hint">口座番号・暗証番号は入力しないでください。更新すると貯金合計も再計算します。</p>';
+ modal(uid?'貯金・口座の編集':'貯金・口座の追加',fields,'saving',uid);
+}
+
 function financeSummary(){
- const savingsSet=state.savings!==null&&state.savings!==undefined&&state.savings!=='';
+ const source=savingsTotals();
+ const savingsSet=source.registered;
  // Until contracted/estimated, the category's provisional budget is counted.
  const categoryFuture=state.categories.reduce((sum,c)=>{const planned=state.payments.filter(p=>p.category===c.id).reduce((a,p)=>a+n(p.amount),0);const base=Math.max(forecastCat(c)||n(c.budget),planned);return sum+Math.max(0,base-paidCategory(c))},0);
  const extraFuture=state.extras.filter(x=>!x.paid).reduce((sum,x)=>sum+Math.max(0,n(x.amount)),0);
  const required=categoryFuture+extraFuture;
- const savings=savingsSet?Math.max(0,n(state.savings)):0;
+ const savings=source.usable;
  const costsSet=state.categories.some(c=>n(c.estimate)||n(c.contract)||n(c.budget))||state.payments.length>0||state.extras.length>0;
- return {required,savings,savingsSet,costsSet,categoryFuture,extraFuture,
+ return {required,savings,savingsTotal:source.total,savingsSet,costsSet,categoryFuture,extraFuture,
   shortfall:Math.max(0,required-savings),surplus:Math.max(0,savings-required)};
 }
 function financePanel(compact=false){
  const f=financeSummary();
- return '<div class="finance-overview '+(compact?'compact':'')+'"><div class="finance-top"><div class="eyebrow">WEDDING FUND</div>'+btn(f.savingsSet?'貯金を更新':'貯金を登録','edit-savings','','ghost tiny')+'</div>'
- +'<div class="finance-main"><span>現在の貯金額</span><button type="button" class="finance-amount-edit" data-action="edit-savings" aria-label="貯金額を更新"><strong>'+(f.savingsSet?yen(f.savings):'未登録')+'</strong><small aria-hidden="true">✎</small></button></div>'
+ return '<div class="finance-overview '+(compact?'compact':'')+'"><div class="finance-top"><div class="eyebrow">WEDDING FUND</div>'+btn('内訳・編集','edit-savings','','ghost tiny')+'</div>'
+ +'<div class="finance-main"><span>貯金の合計</span><button type="button" class="finance-amount-edit" data-action="edit-savings" aria-label="貯金額を更新"><strong>'+(f.savingsSet?yen(f.savingsTotal):'未登録')+'</strong><small aria-hidden="true">✎</small></button></div>'
+ +'<div class="finance-available">式・旅行に使える額 <b>'+(f.savingsSet?yen(f.savings):'未登録')+'</b></div>'
  +'<div class="finance-pairs"><div><span>これから必要な金額</span><strong>'+(f.costsSet?yen(f.required):'未登録')+'</strong></div>'
  +'<div class="'+(f.shortfall?'needs-money':'enough-money')+'"><span>'+(f.savingsSet&&f.costsSet?(f.shortfall?'あと必要な金額':'残る見込み'):'不足額（登録後に計算）')+'</span><strong>'+(f.savingsSet&&f.costsSet?yen(f.shortfall||f.surplus):'—')+'</strong></div></div>'
  +'<p class="finance-note">未払いの見込費用 '+yen(f.categoryFuture)+' ＋ 追加で必要 '+yen(f.extraFuture)+'<span> ／ 支払いを済ませたら現在の貯金額も更新してください。ご祝儀・支援金を二重計上しません</span></p></div>';
@@ -302,6 +376,7 @@ function renderMoney(){
  const budget=n(state.budgetTotal),travel=honeymoonQuote(),ceremonyCost=state.categories.filter(c=>c.id!==honeymoonCategory()?.id).reduce((sum,c)=>sum+(forecastCat(c)||n(c.budget)),0),cost=ceremonyCost+travel,paid=totalPaid(),gifts=totalGifts();
  if(moneyView==='overview'){
   h+=financePanel();
+  h+='<div class="savings-see-all">'+btn('誰の・どの口座の貯金？','money-view','accounts','light')+'</div>';
   h+='<div class="money-summary"><div><span>結婚式費用（見込）</span><strong>'+yen(ceremonyCost)+'</strong></div>'
    +'<div><span>新婚旅行費</span><strong>'+(honeymoonCategory()?yen(travel):'未登録')+'</strong></div>'
    +'<div><span>支払済み合計</span><strong>'+yen(paid)+'</strong></div>'
@@ -309,6 +384,7 @@ function renderMoney(){
   h+='<div class="money-quick">'+btn('予算を設定','budget-total','','light')+btn('費用の内訳','money-view','categories','ghost')+btn('支払い予定','money-view','payments','ghost')+'</div>';
   if(budget&&ceremonyCost>budget)h+='<div class="notice">結婚式費用が予算より '+yen(ceremonyCost-budget)+' 多い見込みです（新婚旅行費を除く）。</div>';
  }
+ if(moneyView==='accounts'){h+=savingsAccountPage();}
  if(moneyView==='honeymoon'){h+=honeymoonPanel();}
  if(moneyView==='extras'){
   h+='<div class="page-actions mb">'+btn('＋ 必要なものを登録','new-extra','','primary')+'</div>';
@@ -419,7 +495,7 @@ function renderSettings(){
  return moreTitle('基本設定')+'<div class="caption">Version 20261020r8</div><div class="card"><form data-form="settings">'+field('挙式日','date','date',state.date,true)+field('新郎の呼び名','couple0','text',state.couple[0])+field('新婦の呼び名','couple1','text',state.couple[1])+'<button class="btn primary btn-wide">設定を保存</button></form></div><div class="card"><h2>リマインド</h2><p class="small muted">アプリを開いたとき・戻ったときに期限をお知らせします。</p>'+btn(state.reminders?'通知をオフにする':'通知をオンにする','notifications','','light')+'<form data-form="reminder-settings"><div class="field"><label>何日前からお知らせする？</label><select name="reminderDays">'+[[0,'当日'],[1,'1日前'],[3,'3日前'],[7,'7日前'],[14,'14日前']].map(v=>'<option value="'+v[0]+'" '+(n(state.reminderDays)===v[0]?'selected':'')+'>'+v[1]+'</option>').join('')+'</select></div><button class="btn light btn-wide" type="submit">通知タイミングを保存</button></form><p class="caption">パートナーの変更は共有接続中にリアルタイム通知。閉じている間は配信設定が必要です。</p>'+btn('パートナー通知を許可','partner-push','','light')+'</div><div class="card"><h2>保存について</h2><p class="small muted">端末に自動保存します。iPhoneの「ホーム画面に追加」前後で、ブラウザ内の保存領域が別になる場合があります。大切なデータはバックアップを保存してください。</p>'+btn('バックアップへ','more','backup')+'</div>';
 }
 function renderBackup(){
- return moreTitle('バックアップと書き出し')+'<div class="card"><h2>JSONバックアップ</h2><p class="small muted">ゲスト、タスク、予算、写真などを一括保存・復元します。</p><div class="page-actions">'+btn('バックアップを保存','export-json','','primary')+btn('バックアップを読み込む','import-json')+'</div><input id="import-file" type="file" accept=".json,application/json" hidden></div><div class="card"><h2>CSV書き出し</h2><p class="small muted">Excelで使える形式で項目別に保存します。</p><div class="field"><select id="csv-section">'+ARRAYS.map(k=>'<option value="'+k+'">'+e(({tasks:'タスク',guests:'ゲスト',payments:'支払い',categories:'予算項目',gifts:'ご祝儀',roles:'役割',tables:'卓',timeline:'当日進行',vendors:'業者',ideas:'アイデア',items:'持ち物',thanks:'お礼',comments:'コメント'})[k])+'</option>').join('')+'</select></div>'+btn('CSVを保存','export-csv','','light')+'</div><p class="caption">JSONファイルには個人情報が含まれるため、第三者には渡さず安全に保管してください。</p>';
+ return moreTitle('バックアップと書き出し')+'<div class="card"><h2>JSONバックアップ</h2><p class="small muted">ゲスト、タスク、予算、写真などを一括保存・復元します。</p><div class="page-actions">'+btn('バックアップを保存','export-json','','primary')+btn('バックアップを読み込む','import-json')+'</div><input id="import-file" type="file" accept=".json,application/json" hidden></div><div class="card"><h2>CSV書き出し</h2><p class="small muted">Excelで使える形式で項目別に保存します。</p><div class="field"><select id="csv-section">'+ARRAYS.map(k=>'<option value="'+k+'">'+e(({tasks:'タスク',guests:'ゲスト',payments:'支払い',categories:'予算項目',gifts:'ご祝儀',roles:'役割',tables:'卓',timeline:'当日進行',vendors:'業者',ideas:'アイデア',items:'持ち物',thanks:'お礼',comments:'コメント',savingsAccounts:'貯金口座',schedules:'準備予定',extras:'必要品',presents:'お祝い・お返し'})[k])+'</option>').join('')+'</select></div>'+btn('CSVを保存','export-csv','','light')+'</div><p class="caption">JSONファイルには個人情報が含まれるため、第三者には渡さず安全に保管してください。</p>';
 }
 
 function renderSync(){
@@ -551,9 +627,10 @@ function closeModal(){
 }
 
 function modalEdit(type,uid=''){
- const plural={task:'tasks',category:'categories',payment:'payments',gift:'gifts',guest:'guests',table:'tables',role:'roles',timeline:'timeline',vendor:'vendors',idea:'ideas',item:'items',thanks:'thanks',schedule:'schedules',extra:'extras',present:'presents'};
- const c=plural[type],x=state[c]?.find(v=>v.id===uid)||{};
+ const plural={saving:'savingsAccounts',task:'tasks',category:'categories',payment:'payments',gift:'gifts',guest:'guests',table:'tables',role:'roles',timeline:'timeline',vendor:'vendors',idea:'ideas',item:'items',thanks:'thanks',schedule:'schedules',extra:'extras',present:'presents'};
+ const c=plural[type],x=(type==='saving'?savingRecords():state[c])?.find(v=>v.id===uid)||{};
  let b='',title='';
+ if(type==='saving'){savingEditor(uid);return}
  if(type==='task'){
   title=uid?'タスクを編集':'新しいタスク';
   b=field('タスク名','title','text',x.title,true)+selectField('role','担当者',state.roles,x.role||state.myRole)+field('期限','due','date',x.due||'')+choices('優先度','priority',[['high','高い'],['normal','普通'],['low','低い']],x.priority||'normal')+area('メモ','memo',x.memo||'')+field('参考URL','url','url',x.url||'')+area('サブタスク（1行に1件）','subtasks',(x.subtasks||[]).map(s=>(s.done?'[x] ':'')+s.title).join('\n'))+'<div class="field"><label>写真添付（容量を抑えて保存）</label><input type="file" name="photo" accept="image/*"></div>'+(x.photo?'<div class="attachments"><img src="'+e(x.photo)+'" alt="添付写真">'+checkField('写真を削除','removePhoto',false)+'</div>':'');
@@ -650,14 +727,33 @@ async function submit(form){
   cloud={config:cfg,room,pushPublicKey:(v.pushPublicKey||'').trim()};localStorage.setItem(CLOUD_KEY,JSON.stringify(cloud));toast('設定を保存しました。接続を確認します');render();connect();return;
  }
  if(type==='comment'){const txt=(v.text||'').trim();if(!txt)return;write('comments',{id:id(),author:nameRole(state.myRole),text:txt,at:Date.now()});closeModal();toast('ひとことを残しました');return}
- if(type==='savings'){if(v.savings===''){toast('貯金額を入力してください');return}setSetting('savings',Math.max(0,n(v.savings)));closeModal();toast('貯金額を更新しました');return}
+ if(type==='saving'){
+  if(!v.owner?.trim()||!v.purpose?.trim()||!v.bank?.trim()||v.amount===''||!Number.isFinite(Number(v.amount))||Number(v.amount)<0){
+   toast('持ち主・用途・金融機関・残高を正しく入力してください');return
+  }
+  if(!state.savingsLedgerInitialized){
+   const legacy=savingRecords().find(x=>x.legacy);
+   state.savingsLedgerInitialized=true;
+   if(legacy&&uid!==LEGACY_SAVINGS_ID){
+    const record={...legacy};delete record.legacy;
+    write('savingsAccounts',record,{quiet:true});
+   }
+  }
+  const before=state.savingsAccounts.find(x=>x.id===uid)||{};
+  const row={...before,id:uid||id(),owner:v.owner.trim(),purpose:v.purpose.trim(),bank:v.bank.trim(),
+   account:(v.account||'').trim(),amount:Math.max(0,n(v.amount)),available:flBool(f,'available')};
+  delete row.legacy;
+  write('savingsAccounts',row);closeModal();
+  toast(uid?'貯金の内訳を更新しました':'貯金を追加しました');return
+ }
+ if(type==='savings'){closeModal();moneyView='accounts';render();return}
  if(type==='honeymoon'){
   const old=honeymoonCategory();
   const item={id:old?.id||'hw-honeymoon',name:'新婚旅行',icon:'✈',color:old?.color||'#91b9b0',estimate:Math.max(0,n(v.honeymoonTotal)),contract:Math.max(0,n(v.honeymoonTotal)),budget:Math.max(0,n(v.honeymoonBudget)),manualPaid:Math.max(0,n(v.honeymoonPaid))};
   write('categories',{...(old||{}),...item});closeModal();toast('新婚旅行費を保存しました');return;
  }
  if(type==='budget-total'){setSetting('budgetTotal',Math.max(0,n(v.budget)));closeModal();toast('全体予算を保存しました');return}
- const types={task:'tasks',category:'categories',payment:'payments',gift:'gifts',guest:'guests',table:'tables',role:'roles',timeline:'timeline',vendor:'vendors',idea:'ideas',item:'items',thanks:'thanks',schedule:'schedules',extra:'extras',present:'presents'};
+ const types={saving:'savingsAccounts',task:'tasks',category:'categories',payment:'payments',gift:'gifts',guest:'guests',table:'tables',role:'roles',timeline:'timeline',vendor:'vendors',idea:'ideas',item:'items',thanks:'thanks',schedule:'schedules',extra:'extras',present:'presents'};
  const col=types[type];if(!col)return;
  const old=state[col].find(x=>x.id===uid)||{};
  const item={...old,...v,id:uid||id()};
@@ -788,7 +884,9 @@ async function handleAction(target){
  if(action==='template'){templateTasks();return}
  if(action==='calendar-export'){exportWeddingCalendar();return}
  if(action==='money-add'){modal('何を追加する？','<div class="stack">'+btn('新婚旅行費を入力','edit-honeymoon','','light')+btn('必要なものを追加','new-extra','','light')+btn('予算項目を追加','new-category','','light')+btn('支払い予定を追加','new-payment','','light')+btn('ご祝儀を追加','new-gift','','light')+'</div>');return}
- if(action==='edit-savings'){modal(state.savings===null?'貯金額を登録':'貯金額を更新',field('現在の貯金額（円）','savings','number',state.savings??'',true,'min="0" inputmode="numeric"')+'<p class="field-hint">最新の残高で更新できます。結婚式・新婚旅行に使える額を入力してください。</p>','savings');return}
+ if(action==='edit-savings'){moneyView='accounts';render();return}
+ if(action==='new-saving'){savingEditor();return}
+ if(action==='edit-saving'){savingEditor(uid);return}
  if(action==='edit-honeymoon'){const c=honeymoonCategory();modal('新婚旅行費の登録・更新',field('旅行の予定総額（円）','honeymoonTotal','number',c?(forecastCat(c)||n(c.budget)):0,true,'min="0" inputmode="numeric"')+field('支払済み（円）','honeymoonPaid','number',c?.manualPaid||0,false,'min="0" inputmode="numeric"')+field('旅行予算（円）','honeymoonBudget','number',c?.budget||0,false,'min="0" inputmode="numeric"')+'<p class="field-hint">支払いタブで完了登録した旅行費は別途加算されます。二重入力にご注意ください。</p>','honeymoon');return}
  if(action==='budget-total'){modal('全体予算',field('予算総額（円）','budget','number',state.budgetTotal,true,'min="0"'),'budget-total');return}
  if(action==='comment'){modal('ふたりのひとこと',area('メッセージ','text'),'comment');return}
@@ -797,7 +895,7 @@ async function handleAction(target){
  if(['toggle-payment','toggle-item','toggle-thanks','toggle-schedule','toggle-extra'].includes(action)){const c={'toggle-payment':'payments','toggle-item':'items','toggle-thanks':'thanks','toggle-schedule':'schedules','toggle-extra':'extras'}[action],x=state[c].find(t=>t.id===uid);if(x){if(action==='toggle-payment'||action==='toggle-extra')write(c,{...x,paid:!x.paid});else{write(c,{...x,done:!x.done});if(!x.done)completion()}}return}
  if(action.startsWith('new-')||action.startsWith('edit-')){modalEdit(action.split('-')[1],action.startsWith('edit-')?uid:'');return}
  if(action==='delete'){
-  const c={task:'tasks',category:'categories',payment:'payments',gift:'gifts',guest:'guests',table:'tables',role:'roles',timeline:'timeline',vendor:'vendors',idea:'ideas',item:'items',thanks:'thanks',schedule:'schedules',extra:'extras',present:'presents'}[target.dataset.type];
+  const c={saving:'savingsAccounts',task:'tasks',category:'categories',payment:'payments',gift:'gifts',guest:'guests',table:'tables',role:'roles',timeline:'timeline',vendor:'vendors',idea:'ideas',item:'items',thanks:'thanks',schedule:'schedules',extra:'extras',present:'presents'}[target.dataset.type];
   if(!c)return;
   if(c==='roles'&&state.roles.length<=1){toast('役割を最低1つ残してください');return}
   if(!window.confirm('削除しますか？ 元に戻せません。'))return;

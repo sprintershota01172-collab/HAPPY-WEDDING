@@ -219,7 +219,8 @@ function choices(label,name,options,value=''){return '<div class="field"><label>
 function selectField(name,label,opts,value){return choices(label,name,opts.map(x=>[x.id,x.name]),value)}
 function checkField(label,name,value){return '<label class="row field"><input type="checkbox" name="'+e(name)+'" '+(value?'checked':'')+'> '+e(label)+'</label>'}
 function modal(title,body,formType='',uid=''){
- modalContent.innerHTML='<div class="modal-head"><h2>'+title+'</h2><button class="close-modal" type="button" data-action="close-modal" aria-label="閉じる">×</button></div><div class="modal-body">'+(formType?'<form data-form="'+formType+'" data-id="'+e(uid)+'">'+body+'<div class="form-actions">'+(uid?'<button type="button" class="btn danger" data-action="delete" data-id="'+e(uid)+'" data-type="'+e(formType)+'">削除</button>':'')+'<button type="button" class="btn ghost" data-action="close-modal">キャンセル</button><button class="btn primary" type="submit">保存する</button></div></form>':body)+'</div>';dialog.showModal();
+ dialog.classList.toggle('guest-dialog',formType==='guest');
+  modalContent.innerHTML='<div class="modal-head"><h2>'+title+'</h2><button class="close-modal" type="button" data-action="close-modal" aria-label="閉じる">×</button></div><div class="modal-body">'+(formType?'<form '+(formType==='guest'?'class="guest-editor" novalidate ':'')+'data-form="'+formType+'" data-id="'+e(uid)+'">'+body+'<div class="form-actions">'+(uid?'<button type="button" class="btn danger" data-action="delete" data-id="'+e(uid)+'" data-type="'+e(formType)+'">削除</button>':'')+'<button type="button" class="btn ghost" data-action="close-modal">キャンセル</button><button class="btn primary" type="submit">保存する</button></div></form>':body)+'</div>';dialog.showModal();
 }
 function modalEdit(type,uid=''){
  const plural={task:'tasks',category:'categories',payment:'payments',gift:'gifts',guest:'guests',table:'tables',role:'roles',timeline:'timeline',vendor:'vendors',idea:'ideas',item:'items',thanks:'thanks'};
@@ -236,7 +237,10 @@ function modalEdit(type,uid=''){
   title=uid?'ご祝儀を編集':'ご祝儀・支援金を追加';b=field('誰から・項目名','source','text',x.source,true)+field('金額（円）','amount','number',x.amount||0,false,'min="0"')+area('メモ','note',x.note||'');
  }else if(type==='guest'){
   title=uid?'ゲストを編集':'ゲストを追加';
-  b=field('お名前','name','text',x.name,true)+choices('出欠','status',[['pending','未回答'],['yes','出席'],['no','欠席']],x.status||'pending')+choices('関係性','relation',[['親族','親族'],['友人','友人'],['職場','職場'],['その他','その他']],x.relation||'友人')+choices('招待側','side',[['新郎側','新郎側'],['新婦側','新婦側'],['両家','両家']],x.side||'新郎側')+field('住所','address','text',x.address||'')+field('アレルギー','allergy','text',x.allergy||'')+field('ご祝儀（実績・円）','gift','number',x.gift||0,false,'min="0"')+field('引出物','favors','text',x.favors||'')+checkField('お車代が必要','transport',x.transport)+checkField('宿泊が必要','stay',x.stay)+checkField('招待状を送付済','sent',x.sent)+area('メモ','memo',x.memo||'');
+  b='<div class="guest-steps" role="tablist" aria-label="ゲストの入力項目">'+[['basic','基本'],['care','出欠・配慮'],['details','費用・メモ']].map((part,i)=>'<button type="button" role="tab" aria-selected="'+(i===0)+'" class="guest-step-tab '+(i===0?'active':'')+'" data-action="guest-step" data-id="'+part[0]+'">'+(i+1)+' · '+part[1]+'</button>').join('')+'</div>'
+   +'<div class="guest-step-panel" data-step="basic">'+field('お名前','name','text',x.name,true)+'<div class="guest-field-grid">'+choices('関係性','relation',[['親族','親族'],['友人','友人'],['職場','職場'],['その他','その他']],x.relation||'友人')+choices('招待側','side',[['新郎側','新郎側'],['新婦側','新婦側'],['両家','両家']],x.side||'新郎側')+'</div>'+field('住所','address','text',x.address||'')+'</div>'
+   +'<div class="guest-step-panel" data-step="care" hidden>'+choices('出欠','status',[['pending','未回答'],['yes','出席'],['no','欠席']],x.status||'pending')+field('アレルギー・食事の配慮','allergy','text',x.allergy||'')+'<div class="guest-switch-list">'+checkField('招待状を送付済','sent',x.sent)+checkField('お車代が必要','transport',x.transport)+checkField('宿泊が必要','stay',x.stay)+'</div></div>'
+   +'<div class="guest-step-panel" data-step="details" hidden>'+field('ご祝儀（実績・円）','gift','number',x.gift||0,false,'min="0"')+field('引出物','favors','text',x.favors||'')+area('メモ','memo',x.memo||'')+'</div>';
  }else if(type==='table'){
   title=uid?'卓を編集':'卓を追加';b=field('卓名','name','text',x.name||('卓'+(state.tables.length+1)),true)+field('人数の目安','capacity','number',x.capacity||8,false,'min="1" max="30"');
  }else if(type==='role'){
@@ -254,6 +258,18 @@ function modalEdit(type,uid=''){
  }
  modal(title,b,type,uid);
 }
+
+function showGuestStep(step){
+ const form=dialog.querySelector('form[data-form="guest"]');
+ if(!form)return;
+ form.querySelectorAll('.guest-step-panel').forEach(el=>{el.hidden=el.dataset.step!==step});
+ form.querySelectorAll('.guest-step-tab').forEach(el=>{
+  const selected=el.dataset.id===step;
+  el.classList.toggle('active',selected);
+  el.setAttribute('aria-selected',String(selected));
+ });
+}
+
 function safeUrl(url){try{const u=new URL(url);return ['https:','http:'].includes(u.protocol)?u.href:''}catch{return ''}}
 async function imageData(file){
  if(!file)return null;
@@ -288,6 +304,7 @@ async function submit(form){
  if(type==='category'){for(const k of ['budget','estimate','contract','manualPaid'])item[k]=Math.max(0,n(v[k]));item.color=old.color||COLORS[state.categories.length%COLORS.length];item.name=v.name.trim()}
  if(type==='payment'){item.amount=Math.max(0,n(v.amount));item.paid=flBool(f,'paid')}
  if(type==='gift'){item.amount=Math.max(0,n(v.amount))}
+ if(type==='guest'&&!v.name?.trim()){showGuestStep('basic');form.elements.name?.focus();toast('ゲストのお名前を入力してください');return}
  if(type==='guest'){item.gift=Math.max(0,n(v.gift));for(const x of ['transport','stay','sent'])item[x]=flBool(f,x)}
  if(type==='table'){item.capacity=Math.max(1,n(v.capacity)||8)}
  if(type==='role'){item.color=v.color}
@@ -340,6 +357,8 @@ async function handleAction(target){
  if(action==='nav'){chooseTab(uid);return}
  if(action==='more'){tab='more';morePage=uid;render();window.scrollTo(0,0);return}
  if(action==='close-modal'){dialog.close();return}
+ if(action==='guest-step'){showGuestStep(uid);return}
+
  if(action==='task-filter'){taskRole=uid;render();return}
  if(action==='money-view'){moneyView=uid;render();return}
  if(action==='pay-month'){const [y,m]=paymentMonth.split('-').map(Number);const d=new Date(y,m-1+n(uid),1);paymentMonth=d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0');paymentDateSelected='';render();return}

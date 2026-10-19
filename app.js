@@ -275,12 +275,12 @@ function savingsRows(){
 }
 function savingsAccountPage(){
  const t=savingsTotals();
- return '<div class="savings-account-page"><div class="row between savings-heading"><b>貯金の内訳</b>'
+ return '<div class="row between savings-heading"><b>貯金の内訳</b>'
  +btn('← 資金に戻る','money-view','overview','ghost tiny')+'</div>'
  +'<div class="savings-account-top"><div><span>すべての貯金</span><strong>'+yen(t.total)+'</strong></div>'
  +'<div><span>式・旅行に使える額</span><strong>'+yen(t.usable)+'</strong></div></div>'
  +'<div class="page-actions">'+btn('＋ 貯金・口座を追加','new-saving','','primary')+'</div>'
- +savingsRows()+'<p class="caption">銀行名・口座の呼び名のみ登録してください。口座番号・暗証番号は不要です。</p></div>';
+ +savingsRows()+'<p class="caption">銀行名・口座の呼び名のみ登録してください。口座番号・暗証番号は不要です。</p>';
 }
 function savingEditor(uid=''){
  const x=savingRecords().find(x=>x.id===uid)||{};

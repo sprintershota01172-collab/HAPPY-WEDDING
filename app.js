@@ -11,8 +11,8 @@ const DEFAULT_ROLES=[
  {id:'host',name:'司会・友人幹事',color:COLORS[4]},{id:'planner',name:'プランナー',color:COLORS[5]}
 ];
 const DEFAULT_CATEGORIES=['会場','衣装','写真・映像','料理','装花','引出物','ペーパーアイテム','演出','二次会','新婚旅行'].map((name,i)=>({id:'c'+i,name,icon:['⌂','♕','▧','♨','✿','🎁','✉','♫','♡','✈'][i],budget:0,estimate:0,contract:0,manualPaid:0,color:COLORS[i%COLORS.length]}));
-const ARRAYS=['roles','categories','tasks','payments','gifts','guests','tables','timeline','vendors','ideas','items','thanks','comments'];
-function defaults(){return {version:1,setup:0,date:'',myRole:'groom',couple:['新郎','新婦'],budgetTotal:0,reminders:false,roles:DEFAULT_ROLES,categories:DEFAULT_CATEGORIES,tasks:[],payments:[],gifts:[],guests:[],tables:[],timeline:[],vendors:[],ideas:[],items:[],thanks:[],comments:[]}}
+const ARRAYS=['roles','categories','tasks','payments','gifts','guests','tables','timeline','vendors','ideas','items','thanks','comments','schedules','extras'];
+function defaults(){return {version:1,setup:0,date:'',myRole:'groom',couple:['新郎','新婦'],budgetTotal:0,savings:null,reminders:false,reminderDays:3,roles:DEFAULT_ROLES,categories:DEFAULT_CATEGORIES,tasks:[],payments:[],gifts:[],guests:[],tables:[],timeline:[],vendors:[],ideas:[],items:[],thanks:[],comments:[],schedules:[],extras:[]}}
 function load(){try{const v=JSON.parse(localStorage.getItem(KEY)||'null');if(!v)return defaults();const d=defaults();return {...d,...v,...Object.fromEntries(ARRAYS.map(k=>[k,Array.isArray(v[k])?v[k]:d[k]]))}}catch(e){return defaults()}}
 let state=load(), tab='home', taskRole='all', guestView='list', moneyView='overview', paymentMonth='',paymentDateSelected='', morePage='',selectedGuest='', cloud=null;
 const app=document.getElementById('main'),dialog=document.getElementById('modal'),modalContent=document.getElementById('modal-content'),toastEl=document.getElementById('toast');
@@ -36,7 +36,7 @@ const badge=(text,cl='')=>'<span class="pill '+cl+'">'+e(text)+'</span>';
 const btn=(text,action,arg='',cl='ghost tiny')=>'<button type="button" class="btn '+cl+'" data-action="'+e(action)+'" data-id="'+e(arg)+'">'+text+'</button>';
 function toast(msg){toastEl.textContent=msg;toastEl.classList.add('show');clearTimeout(toastTimer);toastTimer=setTimeout(()=>toastEl.classList.remove('show'),2900)}
 function save(){try{localStorage.setItem(KEY,JSON.stringify(state))}catch(e){toast('保存容量が不足しています。写真を減らしてバックアップしてください。')}}
-function settingsRemote(){return {date:state.date,couple:state.couple,budgetTotal:state.budgetTotal,reminders:state.reminders}}
+function settingsRemote(){return {date:state.date,couple:state.couple,budgetTotal:state.budgetTotal,savings:state.savings,reminders:state.reminders,reminderDays:state.reminderDays}}
 function setSetting(key,value){state[key]=value;save();if(syncEnabled())queueChange('settings','main',settingsRemote());announcePartnerChange('settings');render()}
 function syncEnabled(){return Boolean(cloud?.config?.apiKey&&cloud?.room)}
 function write(collection,item,opt={}){
@@ -93,17 +93,44 @@ function organizeScreen(){
  panel.scrollTop=panelScrollPositions.get(screenKey)||0;
 }
 function renderSetup(){const step=state.setup===1?2:1;return '<div class="setup"><div class="setup-flower">✿ ♡ ✿</div><h1>Happy Wedding</h1><p>ふたりの特別な一日まで。<br>準備も一緒に楽しもう。</p><div class="card">'+(step===1?'<div class="eyebrow">STEP 1 / 2</div><h2>挙式日はいつ？</h2><form data-form="setup1">'+field('挙式日','date','date',state.date||'',true)+'<button class="btn primary btn-wide">次へ →</button></form>':'<div class="eyebrow">STEP 2 / 2</div><h2>あなたの役割は？</h2><form data-form="setup2">'+selectField('role','あなたの役割',state.roles,state.myRole)+'<button class="btn primary btn-wide">はじめる ♡</button></form>')+'</div><p>あとから設定を変更できます。<br>データは自動でこの端末に保存されます。</p></div>'}
+
+function financeSummary(){
+ const savingsSet=state.savings!==null&&state.savings!==undefined&&state.savings!=='';
+ // Until contracted/estimated, the category's provisional budget is counted.
+ const categoryFuture=state.categories.reduce((sum,c)=>sum+Math.max(0,(forecastCat(c)||n(c.budget))-paidCategory(c)),0);
+ const extraFuture=state.extras.filter(x=>!x.paid).reduce((sum,x)=>sum+Math.max(0,n(x.amount)),0);
+ const required=categoryFuture+extraFuture;
+ const savings=savingsSet?Math.max(0,n(state.savings)):0;
+ return {required,savings,savingsSet,categoryFuture,extraFuture,
+  shortfall:Math.max(0,required-savings),surplus:Math.max(0,savings-required)};
+}
+function financePanel(compact=false){
+ const f=financeSummary();
+ return '<div class="finance-overview '+(compact?'compact':'')+'"><div class="finance-top"><div class="eyebrow">WEDDING FUND</div>'+btn(f.savingsSet?'貯金額を変更':'貯金額を登録','edit-savings','','ghost tiny')+'</div>'
+ +'<div class="finance-main"><span>現在の貯金額</span><strong>'+ (f.savingsSet?yen(f.savings):'未登録') +'</strong></div>'
+ +'<div class="finance-pairs"><div><span>これから必要な金額</span><strong>'+yen(f.required)+'</strong></div>'
+ +'<div class="'+(f.shortfall?'needs-money':'enough-money')+'"><span>'+(f.savingsSet?(f.shortfall?'あと必要な金額':'残る見込み'):'不足額（貯金登録後に計算）')+'</span><strong>'+(f.savingsSet?yen(f.shortfall||f.surplus):'—')+'</strong></div></div>'
+ +'<p class="finance-note">未払いの見込費用 '+yen(f.categoryFuture)+' ＋ 追加で必要 '+yen(f.extraFuture)+'<span> ／ ご祝儀・支援金をすでに貯金額へ含めている場合は再加算しません</span></p></div>';
+}
+function futureSchedule(x){
+ return (x.date||'')+(x.time?' '+x.time:'');
+}
+function upcomingSchedule(limit=3){
+ return state.schedules.filter(x=>!x.done).sort((a,b)=>futureSchedule(a).localeCompare(futureSchedule(b))).slice(0,limit);
+}
+
 function renderHome(){
- const left=distance(state.date),done=state.tasks.filter(t=>t.done).length,total=state.tasks.length,paid=totalPaid(), forecast=totalForecast();
- const near=state.tasks.filter(x=>!x.done&&x.due).sort((a,b)=>a.due.localeCompare(b.due)).slice(0,4);
- const nextPay=state.payments.filter(p=>!p.paid&&p.due).sort((a,b)=>a.due.localeCompare(b.due)).slice(0,2);
- let h='<div class="hero"><div class="overline">OUR WEDDING DAY</div><div class="days">'+Math.abs(left)+'</div><div class="days-label">'+(left>=0?'DAYS TO GO':'DAYS SINCE')+'</div><div class="wedding-date">'+e(state.date.replaceAll('-',' . '))+'</div><div class="couple">'+e(state.couple[0])+' ♡ '+e(state.couple[1])+'</div><p class="hero-message">'+(left>0?'結婚式まであと'+left+'日だね。ひとつずつ、楽しもう！':left===0?'今日はふたりの特別な日。おめでとう！':'大切な一日から'+Math.abs(left)+'日。ありがとうを届けよう。')+'</p></div>';
- h+='<div class="metric-grid"><div class="metric"><div class="row between"><span class="small muted">準備の進み具合</span><span class="symbol">✿</span></div><div class="value">'+progress(state.tasks)+'%</div><div class="progress"><span style="width:'+progress(state.tasks)+'%"></span></div><div class="detail">'+done+' / '+total+' タスク完了</div></div><div class="metric"><div class="row between"><span class="small muted">自己負担見込み</span><span class="symbol">♡</span></div><div class="value" style="font-size:18px">'+yen(Math.max(0,forecast-totalGifts()))+'</div><div class="detail">見込費用 − ご祝儀</div></div></div>';
- h+=section('つぎにやること',btn('一覧を見る →','nav','tasks'))+(near.length?'<div class="list">'+near.map(t=>taskCard(t,true)).join('')+'</div>':empty('まだ期限付きタスクがありません。<br>準備テンプレートから始めましょう。'));
- if(!total)h+='<p>'+btn('準備スケジュールを一括追加','template','','primary')+'</p>';
- h+=section('お支払い予定',btn('お金を見る →','nav','money'))+(nextPay.length?'<div class="card">'+nextPay.map(p=>'<div class="row between" style="padding:6px 0"><div><b>'+e(p.title)+'</b><div class="small muted">'+dayLabel(p.due)+' · '+e(nameRole(p.payer))+'</div></div><b>'+yen(p.amount)+'</b></div>').join('')+'</div>':'<div class="card small muted">支払い予定はまだ登録されていません。</div>');
- h+=section('ふたりのひとこと',btn('コメントを残す ＋','comment'))+'<div class="card">'+(state.comments.length?state.comments.slice().sort((a,b)=>b.at-a.at).slice(0,4).map(c=>'<div style="padding:8px 0;border-bottom:1px solid #f4eeea"><div class="small muted">'+e(c.author||'ふたり')+' · '+new Date(c.at).toLocaleDateString('ja-JP')+'</div><div class="twoline">'+e(c.text)+'</div></div>').join(''):'<div class="small muted">「これ楽しみ！」など、ひとこと残してみよう。</div>')+'</div>';
- h+='<div class="callout">✿　進み具合は比べなくて大丈夫。ふたりのペースで。</div>';
+ const left=distance(state.date),done=state.tasks.filter(t=>t.done).length,total=state.tasks.length;
+ const near=state.tasks.filter(x=>!x.done&&x.due).sort((a,b)=>a.due.localeCompare(b.due)).slice(0,3);
+ const coming=upcomingSchedule(4);
+ let h='<div class="home-event-top"><div class="home-date"><span>WEDDING DAY</span><strong>'+e(state.date.replaceAll('-',' / '))+'</strong></div><div class="home-count"><b>'+Math.abs(left)+'</b><span>'+(left>=0?'DAYS LEFT':'DAYS SINCE')+'</span></div></div>';
+ h+=financePanel(true);
+ h+='<div class="home-actions">'+btn('＋ 予定を登録','new-schedule','','primary')+btn('＋ 必要なもの','new-extra','','light')+btn('資金管理','nav','money','','ghost')+'</div>';
+ h+='<div class="home-progress"><span>準備の進捗 <b>'+progress(state.tasks)+'%</b></span><span>'+done+' / '+total+' 完了</span><div class="progress"><span style="width:'+progress(state.tasks)+'%"></span></div></div>';
+ h+=section('直近の予定',btn('すべて見る →','more','appointments'))+'<div class="home-preview">';
+ h+=coming.length?coming.map(x=>'<div class="mini-band"><time>'+dayLabel(x.date)+(x.time?' '+e(x.time):'')+'</time><strong>'+e(x.title)+'</strong>'+btn('編集','edit-schedule',x.id)+'</div>').join(''):'<div class="small muted">打ち合わせ・試着・提出期限などを登録できます。</div>';
+ h+='</div>';
+ h+=section('次のタスク',btn('タスク一覧 →','nav','tasks'))+'<div class="home-preview">'+(near.length?near.map(x=>taskCard(x,true)).join(''):btn('準備テンプレートを追加','template','','light'))+'</div>';
  return h;
 }
 function taskCard(t,compact=false){
@@ -130,7 +157,7 @@ function forecastCat(c){return n(c.contract)>0?n(c.contract):n(c.estimate)}
 function totalForecast(){return state.categories.reduce((s,c)=>s+forecastCat(c),0)}
 function renderMoney(){
  let h=header('お金の管理',btn('＋ 追加','money-add','','primary'),'見積から支払い、ご祝儀までひと目で');
- h+='<div class="tabs">'+[['overview','全体'],['categories','項目別'],['payments','支払い'],['gifts','ご祝儀']].map(v=>'<button class="tab '+(moneyView===v[0]?'active':'')+'" data-action="money-view" data-id="'+v[0]+'">'+v[1]+'</button>').join('')+'</div>';
+ h+='<div class="tabs">'+[['overview','資金'],['extras','必要なもの'],['categories','費用'],['payments','支払い'],['gifts','ご祝儀']].map(v=>'<button class="tab '+(moneyView===v[0]?'active':'')+'" data-action="money-view" data-id="'+v[0]+'">'+v[1]+'</button>').join('')+'</div>';
  const budget=n(state.budgetTotal),cost=totalForecast(),paid=totalPaid(),gifts=totalGifts();
  if(moneyView==='overview'){
   const progressPct=budget?Math.round(cost/budget*100):0;
@@ -139,6 +166,11 @@ function renderMoney(){
   h+=section('項目ごとの予算',btn('詳しく →','money-view','categories'));
   h+='<div class="card">'+state.categories.filter(c=>n(c.budget)||forecastCat(c)).slice(0,8).map(c=>barCategory(c)).join('')+(state.categories.every(c=>!n(c.budget)&&!forecastCat(c))?'<div class="small muted">見積・契約額を入力するとグラフが表示されます。</div>':'')+'</div>';
   h+=section('支払いが近いもの',btn('支払いを管理 →','money-view','payments'))+'<div class="card">'+(state.payments.filter(p=>!p.paid).length?state.payments.filter(p=>!p.paid).sort((a,b)=>(a.due||'9999').localeCompare(b.due||'9999')).slice(0,3).map(p=>'<div class="row between" style="padding:6px 0"><span>'+e(p.title)+'<div class="small muted">'+dayLabel(p.due)+'</div></span><b>'+yen(p.amount)+'</b></div>').join(''):'<span class="small muted">未払い予定はありません。</span>')+'</div>';
+ }
+ if(moneyView==='extras'){
+  h+='<div class="page-actions mb">'+btn('＋ 必要なものを登録','new-extra','','primary')+'</div>';
+  h+='<div class="caption">未購入のものは「これから必要な金額」に加算されます。費用項目と重複登録しないでください。</div>';
+  h+=state.extras.length?'<div class="list">'+state.extras.map(x=>'<div class="item"><input class="check" type="checkbox" data-action="toggle-extra" data-id="'+e(x.id)+'" '+(x.paid?'checked':'')+' aria-label="購入済みにする"><div class="content"><b class="item-title">'+e(x.title)+'</b><div class="item-sub">'+e(x.memo||'')+' '+(x.due?'・'+dayLabel(x.due):'')+'</div></div><b class="money">'+yen(x.amount)+'</b>'+btn('編集','edit-extra',x.id)+'</div>').join('')+'</div>':empty('まだ追加の必要品は登録されていません。');
  }
  if(moneyView==='categories'){
   h+='<div class="page-actions mb">'+btn('＋ 項目を追加','new-category','','light')+btn('全体予算の設定','budget-total')+'</div>';

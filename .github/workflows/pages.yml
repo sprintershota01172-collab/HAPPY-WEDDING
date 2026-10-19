@@ -1,4 +1,4 @@
-name: Deploy Happy Wedding to GitHub Pages
+name: Publish Happy Wedding (fresh deployment)
 on:
   push:
     branches: [main]
@@ -8,12 +8,12 @@ permissions:
   pages: write
   id-token: write
 concurrency:
-  group: pages
+  group: happy-wedding-live-v2
   cancel-in-progress: true
 jobs:
   deploy:
     environment:
-      name: github-pages
+      name: happy-wedding-live
       url: ${{ steps.deployment.outputs.page_url }}
     runs-on: ubuntu-latest
     steps:

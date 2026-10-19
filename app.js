@@ -300,7 +300,7 @@ function templateTasks(){
  render();toast(added?added+'件の準備タスクを追加しました':'テンプレートはすべて登録済みです');
 }
 function download(name,text,mime){
- const blob=new Blob(['\ufeff',text],{type:mime});const u=URL.createObjectURL(blob),a=document.createElement('a');a.href=u;a.download=name;document.body.append(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(u),30000)
+ const blob=new Blob([mime.includes('csv')?'\ufeff':'',text],{type:mime});const u=URL.createObjectURL(blob),a=document.createElement('a');a.href=u;a.download=name;document.body.append(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(u),30000)
 }
 function toCsv(list){const keys=Array.from(new Set(list.flatMap(row=>Object.keys(row))));const encode=v=>'"'+String((typeof v==='object'&&v!==null)?JSON.stringify(v):(v??'')).replaceAll('"','""')+'"';return [keys.map(encode).join(','),...list.map(row=>keys.map(k=>encode(row[k])).join(','))].join('\r\n')}
 function remind(){
@@ -371,7 +371,7 @@ document.addEventListener('change',async ev=>{
  if(t.matches('input[data-action^="toggle-"]')){handleAction(t);return}
  if(t.id==='import-file'&&t.files?.[0]){
   if(syncEnabled()){toast('復元する前に共有接続を解除してください');return}
-  try{const obj=JSON.parse(await t.files[0].text());if(!obj||!Array.isArray(obj.tasks)||!Array.isArray(obj.roles)||!Array.isArray(obj.guests)||!Array.isArray(obj.categories))throw Error('バックアップ形式が不正です');if(!confirm('現在の端末データをバックアップ内容で置き換えますか？'))return;state={...defaults(),...obj};save();render();toast('データを復元しました')}catch(err){toast('読み込みに失敗: '+err.message)}
+  try{const obj=JSON.parse((await t.files[0].text()).replace(/^\uFEFF/,''));if(!obj||!Array.isArray(obj.tasks)||!Array.isArray(obj.roles)||!Array.isArray(obj.guests)||!Array.isArray(obj.categories))throw Error('バックアップ形式が不正です');if(!confirm('現在の端末データをバックアップ内容で置き換えますか？'))return;state={...defaults(),...obj};save();render();toast('データを復元しました')}catch(err){toast('読み込みに失敗: '+err.message)}
  }
 });
 document.addEventListener('submit',async ev=>{const f=ev.target.closest('form[data-form]');if(!f)return;ev.preventDefault();const b=f.querySelector('button[type=submit],button:not([type])');if(b)b.disabled=true;try{await submit(f)}catch(err){console.error(err);toast('保存できませんでした: '+err.message)}finally{if(b)b.disabled=false}});

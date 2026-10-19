@@ -1,5 +1,6 @@
 
 import {startSync,stopSync,roomCode,queueChange,queuedCount} from './sync.js';
+import {setupPartnerNotifications,initPartnerRoom,announcePartnerChange,receivePartnerActivity,updatePartnerBell,enablePartnerPush} from './notifications.js';
 
 const KEY='happy_wedding_local_v1';
 const CLOUD_KEY='happy_wedding_cloud_v1';
@@ -36,17 +37,19 @@ const btn=(text,action,arg='',cl='ghost tiny')=>'<button type="button" class="bt
 function toast(msg){toastEl.textContent=msg;toastEl.classList.add('show');clearTimeout(toastTimer);toastTimer=setTimeout(()=>toastEl.classList.remove('show'),2900)}
 function save(){try{localStorage.setItem(KEY,JSON.stringify(state))}catch(e){toast('保存容量が不足しています。写真を減らしてバックアップしてください。')}}
 function settingsRemote(){return {date:state.date,couple:state.couple,budgetTotal:state.budgetTotal,reminders:state.reminders}}
-function setSetting(key,value){state[key]=value;save();if(syncEnabled())queueChange('settings','main',settingsRemote());render()}
+function setSetting(key,value){state[key]=value;save();if(syncEnabled())queueChange('settings','main',settingsRemote());announcePartnerChange('settings');render()}
 function syncEnabled(){return Boolean(cloud?.config?.apiKey&&cloud?.room)}
 function write(collection,item,opt={}){
  if(!ARRAYS.includes(collection))return;
  const idx=state[collection].findIndex(x=>x.id===item.id);
  if(idx<0)state[collection].push(item);else state[collection][idx]=item;
  save();if(syncEnabled())queueChange(collection,item.id,item);
- if(!opt.quiet)render();
+ if(!opt.quiet){announcePartnerChange(collection,idx<0?'追加':item.done?'完了':'更新');render()}
 }
-function erase(collection,uid){state[collection]=state[collection].filter(x=>x.id!==uid);save();if(syncEnabled())queueChange(collection,uid,null,true);render()}
-function remote(entry){
+function erase(collection,uid){state[collection]=state[collection].filter(x=>x.id!==uid);save();if(syncEnabled())queueChange(collection,uid,null,true);announcePartnerChange(collection,'削除');render()}
+function remote(entry,meta={}){
+ if(entry.collection==='activity'){receivePartnerActivity(entry,meta);return}
+ if(entry.collection==='pushSub')return;
  if(entry.collection==='settings'){Object.assign(state,entry.value||{});save();scheduleRender();return}
  if(!ARRAYS.includes(entry.collection))return;
  const list=state[entry.collection],i=list.findIndex(x=>x.id===entry.id);
@@ -56,7 +59,7 @@ function remote(entry){
 }
 function scheduleRender(){if(renderScheduled)return;renderScheduled=true;requestAnimationFrame(()=>{renderScheduled=false;if(!dialog.open)render()})}
 function status(s){const el=$('#connection');el.textContent=({connecting:'同期接続中',synced:'ふたりで同期中',offline:'オフライン保存',error:'同期エラー'})[s]||'この端末に保存';el.style.background=s==='error'?'#ffe4e5':''}
-async function connect(){if(!syncEnabled())return;try{await startSync(cloud.config,cloud.room,remote,status,(empty)=>{
+async function connect(){if(!syncEnabled())return;initPartnerRoom(cloud.room);try{await startSync(cloud.config,cloud.room,remote,status,(empty)=>{
  if(empty){for(const c of ARRAYS)for(const item of state[c])queueChange(c,item.id,item);queueChange('settings','main',settingsRemote())}
  toast(empty?'共有ルームを作成しました':'共有ルームに接続しました');
  });}catch(err){status('error');console.error(err);toast('クラウド接続を確認してください: '+err.message)}}
@@ -68,7 +71,7 @@ function progress(items){return items.length?Math.round(items.filter(x=>x.done).
 function formatPriority(x){return x==='high'?badge('優先','danger'):x==='low'?badge('ゆっくり','mint'):''}
 function overdue(x){return x.due&&!x.done&&distance(x.due)<0}
 function dueSoon(x){return x.due&&!x.done&&distance(x.due)>=0&&distance(x.due)<=7}
-function render(){const oldPanel=app.querySelector('.screen-panel');if(oldPanel?.dataset.screenKey)panelScrollPositions.set(oldPanel.dataset.screenKey,oldPanel.scrollTop);const bottomNav=document.querySelector('.bottom-nav');if(bottomNav)bottomNav.hidden=!state.setup;document.querySelectorAll('.bottom-nav button').forEach(b=>b.classList.toggle('active',b.dataset.tab===tab));$('#connection').title=syncEnabled()?'共有コード設定済み':'端末に保存';if(!state.setup){app.innerHTML=renderSetup();return}
+function render(){updatePartnerBell();const oldPanel=app.querySelector('.screen-panel');if(oldPanel?.dataset.screenKey)panelScrollPositions.set(oldPanel.dataset.screenKey,oldPanel.scrollTop);const bottomNav=document.querySelector('.bottom-nav');if(bottomNav)bottomNav.hidden=!state.setup;document.querySelectorAll('.bottom-nav button').forEach(b=>b.classList.toggle('active',b.dataset.tab===tab));$('#connection').title=syncEnabled()?'共有コード設定済み':'端末に保存';if(!state.setup){app.innerHTML=renderSetup();return}
  app.innerHTML=tab==='home'?renderHome():tab==='tasks'?renderTasks():tab==='money'?renderMoney():tab==='guests'?renderGuests():renderMore();
  organizeScreen();
 }
@@ -202,14 +205,14 @@ function renderSubpage(){
  return moreTitle('準備');
 }
 function renderSettings(){
- return moreTitle('基本設定')+'<div class="card"><form data-form="settings">'+field('挙式日','date','date',state.date,true)+field('新郎の呼び名','couple0','text',state.couple[0])+field('新婦の呼び名','couple1','text',state.couple[1])+'<button class="btn primary btn-wide">設定を保存</button></form></div><div class="card"><h2>期限のお知らせ</h2><p class="small muted">アプリを開いた時、直近3日と期限を過ぎた予定をお知らせできます。ブラウザが対応する場合のみシステム通知も表示します。</p>'+btn(state.reminders?'通知をオフにする':'通知をオンにする','notifications','','light')+'<p class="caption">アプリを閉じている間のプッシュ通知は、この版では提供していません。</p></div><div class="card"><h2>保存について</h2><p class="small muted">端末に自動保存します。iPhoneの「ホーム画面に追加」前後で、ブラウザ内の保存領域が別になる場合があります。大切なデータはバックアップを保存してください。</p>'+btn('バックアップへ','more','backup')+'</div>';
+ return moreTitle('基本設定')+'<div class="card"><form data-form="settings">'+field('挙式日','date','date',state.date,true)+field('新郎の呼び名','couple0','text',state.couple[0])+field('新婦の呼び名','couple1','text',state.couple[1])+'<button class="btn primary btn-wide">設定を保存</button></form></div><div class="card"><h2>期限のお知らせ</h2><p class="small muted">アプリを開いた時、直近3日と期限を過ぎた予定をお知らせできます。ブラウザが対応する場合のみシステム通知も表示します。</p>'+btn(state.reminders?'通知をオフにする':'通知をオンにする','notifications','','light')+'<p class="caption">パートナーの変更は共有接続中にリアルタイム通知。閉じている間は配信設定が必要です。</p>'+btn('パートナー通知を許可','partner-push','','light')+'</div><div class="card"><h2>保存について</h2><p class="small muted">端末に自動保存します。iPhoneの「ホーム画面に追加」前後で、ブラウザ内の保存領域が別になる場合があります。大切なデータはバックアップを保存してください。</p>'+btn('バックアップへ','more','backup')+'</div>';
 }
 function renderBackup(){
  return moreTitle('バックアップと書き出し')+'<div class="card"><h2>JSONバックアップ</h2><p class="small muted">ゲスト、タスク、予算、写真などを一括保存・復元します。</p><div class="page-actions">'+btn('バックアップを保存','export-json','','primary')+btn('バックアップを読み込む','import-json')+'</div><input id="import-file" type="file" accept=".json,application/json" hidden></div><div class="card"><h2>CSV書き出し</h2><p class="small muted">Excelで使える形式で項目別に保存します。</p><div class="field"><select id="csv-section">'+ARRAYS.map(k=>'<option value="'+k+'">'+e(({tasks:'タスク',guests:'ゲスト',payments:'支払い',categories:'予算項目',gifts:'ご祝儀',roles:'役割',tables:'卓',timeline:'当日進行',vendors:'業者',ideas:'アイデア',items:'持ち物',thanks:'お礼',comments:'コメント'})[k])+'</option>').join('')+'</select></div>'+btn('CSVを保存','export-csv','','light')+'</div><p class="caption">JSONファイルには個人情報が含まれるため、第三者には渡さず安全に保管してください。</p>';
 }
 function renderSync(){
  const cfg=cloud?.config||{},code=cloud?.room||'';
- return moreTitle('ふたりでリアルタイム共有')+'<div class="card"><h2>共有のしくみ</h2><p class="small muted">Firebase（外部クラウド）を設定すると、ふたりの端末でタスクやゲストなどを同期できます。設定がなくても、端末だけで全機能を使えます。</p><div class="notice">重要：共有コードを知る人はデータにアクセスできます。招待相手以外にコードを渡さないでください。ご利用前にFirebaseのセキュリティルールをREADMEどおりに設定してください。</div></div><div class="card"><h2>Firebaseの接続設定</h2><form data-form="sync"><div class="field"><label>API Key</label><input name="apiKey" required value="'+e(cfg.apiKey||'')+'" placeholder="AIza..." autocomplete="off"></div><div class="field"><label>Project ID</label><input name="projectId" required value="'+e(cfg.projectId||'')+'" autocomplete="off"></div><div class="field"><label>App ID</label><input name="appId" required value="'+e(cfg.appId||'')+'" autocomplete="off"></div><div class="field"><label>Auth Domain</label><input name="authDomain" value="'+e(cfg.authDomain||'')+'" autocomplete="off"></div><div class="field"><label>共有コード（48文字）</label><input name="room" required value="'+e(code)+'" minlength="48" maxlength="48" placeholder="下のボタンで新しく作成、または相手から貼付" autocomplete="off"></div><div class="page-actions mb">'+btn('新しい共有コードを発行','generate-room')+btn('コードをコピー','copy-room')+'</div><button class="btn primary btn-wide">保存して接続</button></form><div class="caption">両端末に同じFirebase設定と共有コードを入力してください。匿名認証を利用します。</div></div>'+(syncEnabled()?'<div class="card">'+btn('共有接続を解除','disconnect','','danger')+'<p class="caption">解除しても端末に保存したデータは残ります。</p><div class="small muted">未送信の変更: '+queuedCount()+' 件</div></div>':'');
+ return moreTitle('ふたりでリアルタイム共有')+'<div class="card"><h2>共有のしくみ</h2><p class="small muted">Firebase（外部クラウド）を設定すると、ふたりの端末でタスクやゲストなどを同期できます。設定がなくても、端末だけで全機能を使えます。</p><div class="notice">重要：共有コードを知る人はデータにアクセスできます。招待相手以外にコードを渡さないでください。ご利用前にFirebaseのセキュリティルールをREADMEどおりに設定してください。</div></div><div class="card"><h2>Firebaseの接続設定</h2><form data-form="sync"><div class="field"><label>API Key</label><input name="apiKey" required value="'+e(cfg.apiKey||'')+'" placeholder="AIza..." autocomplete="off"></div><div class="field"><label>Project ID</label><input name="projectId" required value="'+e(cfg.projectId||'')+'" autocomplete="off"></div><div class="field"><label>App ID</label><input name="appId" required value="'+e(cfg.appId||'')+'" autocomplete="off"></div><div class="field"><label>Auth Domain</label><input name="authDomain" value="'+e(cfg.authDomain||'')+'" autocomplete="off"></div><div class="field"><label>共有コード（48文字）</label><input name="room" required value="'+e(code)+'" minlength="48" maxlength="48" placeholder="下のボタンで新しく作成、または相手から貼付" autocomplete="off"></div><div class="field"><label>Webプッシュ公開鍵（任意）</label><input name="pushPublicKey" value="'+e(cloud?.pushPublicKey||'')+'" placeholder="VAPID公開鍵" autocomplete="off"></div><div class="page-actions mb">'+btn('新しい共有コードを発行','generate-room')+btn('コードをコピー','copy-room')+'</div><button class="btn primary btn-wide">保存して接続</button></form><div class="caption">両端末に同じFirebase設定と共有コードを入力してください。匿名認証を利用します。</div></div>'+(syncEnabled()?'<div class="card">'+btn('共有接続を解除','disconnect','','danger')+'<p class="caption">解除しても端末に保存したデータは残ります。</p><div class="small muted">未送信の変更: '+queuedCount()+' 件</div></div>':'');
 }
 function field(label,name,type='text',value='',required=false,extra=''){
  return '<div class="field"><label for="f-'+e(name)+'">'+e(label)+'</label><input id="f-'+e(name)+'" name="'+e(name)+'" type="'+e(type)+'" value="'+e(value)+'" '+(required?'required':'')+' '+extra+'></div>';
@@ -283,11 +286,11 @@ async function submit(form){
  const type=form.dataset.form,uid=form.dataset.id||'',f=new FormData(form),v=values(form);
  if(type==='setup1'){if(!v.date){toast('挙式日を選択してください');return}state.date=v.date;state.setup=1;save();render();return}
  if(type==='setup2'){state.myRole=v.role;state.setup=2;save();render();return}
- if(type==='settings'){state.date=v.date;state.couple=[v.couple0.trim()||'新郎',v.couple1.trim()||'新婦'];save();if(syncEnabled())queueChange('settings','main',settingsRemote());toast('基本設定を保存しました');render();return}
+ if(type==='settings'){state.date=v.date;state.couple=[v.couple0.trim()||'新郎',v.couple1.trim()||'新婦'];save();if(syncEnabled())queueChange('settings','main',settingsRemote());announcePartnerChange('settings');toast('基本設定を保存しました');render();return}
  if(type==='sync'){
   const cfg={apiKey:v.apiKey.trim(),projectId:v.projectId.trim(),appId:v.appId.trim(),authDomain:v.authDomain.trim()};
   const room=v.room.trim();if(!/^[a-f0-9]{48}$/.test(room)){toast('共有コードは48文字の小文字英数字です');return}
-  cloud={config:cfg,room};localStorage.setItem(CLOUD_KEY,JSON.stringify(cloud));toast('設定を保存しました。接続を確認します');render();connect();return;
+  cloud={config:cfg,room,pushPublicKey:(v.pushPublicKey||'').trim()};localStorage.setItem(CLOUD_KEY,JSON.stringify(cloud));toast('設定を保存しました。接続を確認します');render();connect();return;
  }
  if(type==='comment'){const txt=(v.text||'').trim();if(!txt)return;write('comments',{id:id(),author:nameRole(state.myRole),text:txt,at:Date.now()});dialog.close();toast('ひとことを残しました');return}
  if(type==='budget-total'){setSetting('budgetTotal',Math.max(0,n(v.budget)));dialog.close();toast('全体予算を保存しました');return}
@@ -333,6 +336,7 @@ function templateTasks(){
   const item={id:id(),templateKey:key,title,role:state.roles.some(r=>r.id===assigned)?assigned:state.roles[0]?.id,due,priority:'normal',done:false,memo:'',url:'',subtasks:[]};
   write('tasks',item,{quiet:true});added++;
  }
+ if(added)announcePartnerChange('tasks','一括追加');
  render();toast(added?added+'件の準備タスクを追加しました':'テンプレートはすべて登録済みです');
 }
 function download(name,text,mime){
@@ -358,6 +362,7 @@ async function handleAction(target){
  if(action==='more'){tab='more';morePage=uid;render();window.scrollTo(0,0);return}
  if(action==='close-modal'){dialog.close();return}
  if(action==='guest-step'){showGuestStep(uid);return}
+ if(action==='partner-push'){await enablePartnerPush(cloud?.pushPublicKey||'');return}
 
  if(action==='task-filter'){taskRole=uid;render();return}
  if(action==='money-view'){moneyView=uid;render();return}
@@ -421,6 +426,7 @@ dialog.addEventListener('click',ev=>{if(ev.target===dialog)dialog.close()});
 window.addEventListener('online',()=>{if(syncEnabled())connect()});
 window.addEventListener('focus',()=>remind());
 try{cloud=JSON.parse(localStorage.getItem(CLOUD_KEY)||'null')}catch{}
+setupPartnerNotifications({getRoom:()=>cloud?.room||'',getRole:()=>nameRole(state.myRole),toast,modal});
 render();setTimeout(remind,600);
 if(syncEnabled())connect();
 if('serviceWorker' in navigator)window.addEventListener('load',()=>navigator.serviceWorker.register('./sw.js').catch(console.warn));

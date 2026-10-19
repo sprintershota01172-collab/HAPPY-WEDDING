@@ -1,8 +1,27 @@
-const CACHE = 'happy-wedding-v4';
-const SHELL = ['./','./index.html','./styles.css','./app.js','./sync.js','./notifications.js','./manifest.webmanifest','./icon.svg'];
+const CACHE = 'happy-wedding-v5-20261020r1';
+const SHELL = ['./','./index.html','./styles.css?v=20261020r1','./app.js?v=20261020r1','./sync.js','./notifications.js','./manifest.webmanifest','./icon.svg'];
 self.addEventListener('install', e => { e.waitUntil(caches.open(CACHE).then(c=>c.addAll(SHELL)).then(()=>self.skipWaiting())); });
 self.addEventListener('activate', e => { e.waitUntil(caches.keys().then(keys=>Promise.all(keys.filter(k=>k!==CACHE).map(k=>caches.delete(k)))).then(()=>self.clients.claim())); });
-self.addEventListener('fetch', e => { if(e.request.method!=='GET') return; const u=new URL(e.request.url); if(u.origin!==self.location.origin) return; e.respondWith(fetch(e.request).then(r=>{if(r.ok){const clone=r.clone();caches.open(CACHE).then(c=>c.put(e.request,clone));}return r;}).catch(()=>caches.match(e.request).then(r=>r||caches.match('./index.html')))); });
+self.addEventListener('fetch',event=>{
+ if(event.request.method!=='GET')return;
+ const url=new URL(event.request.url);
+ if(url.origin!==self.location.origin)return;
+ event.respondWith((async()=>{
+  try{
+   const response=await fetch(event.request,{cache:'no-store'});
+   if(response.ok){
+    const cache=await caches.open(CACHE);
+    event.waitUntil(cache.put(event.request,response.clone()).catch(()=>{}));
+   }
+   return response;
+  }catch{
+   const cached=await caches.match(event.request,{ignoreSearch:true});
+   if(cached)return cached;
+   if(event.request.mode==='navigate')return caches.match('./index.html');
+   return Response.error();
+  }
+ })());
+});
 self.addEventListener('message',e=>{if(e.data?.type==='SKIP_WAITING')self.skipWaiting()});
 self.addEventListener('push', event => {
  let data={};

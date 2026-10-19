@@ -97,20 +97,21 @@ function renderSetup(){const step=state.setup===1?2:1;return '<div class="setup"
 function financeSummary(){
  const savingsSet=state.savings!==null&&state.savings!==undefined&&state.savings!=='';
  // Until contracted/estimated, the category's provisional budget is counted.
- const categoryFuture=state.categories.reduce((sum,c)=>{const planned=state.payments.filter(p=>p.category===c.id).reduce((a,p)=>a+n(p.amount),0);const base=forecastCat(c)||n(c.budget)||planned;return sum+Math.max(0,base-paidCategory(c))},0);
+ const categoryFuture=state.categories.reduce((sum,c)=>{const planned=state.payments.filter(p=>p.category===c.id).reduce((a,p)=>a+n(p.amount),0);const base=Math.max(forecastCat(c)||n(c.budget),planned);return sum+Math.max(0,base-paidCategory(c))},0);
  const extraFuture=state.extras.filter(x=>!x.paid).reduce((sum,x)=>sum+Math.max(0,n(x.amount)),0);
  const required=categoryFuture+extraFuture;
  const savings=savingsSet?Math.max(0,n(state.savings)):0;
- return {required,savings,savingsSet,categoryFuture,extraFuture,
+ const costsSet=state.categories.some(c=>n(c.estimate)||n(c.contract)||n(c.budget))||state.payments.length>0||state.extras.length>0;
+ return {required,savings,savingsSet,costsSet,categoryFuture,extraFuture,
   shortfall:Math.max(0,required-savings),surplus:Math.max(0,savings-required)};
 }
 function financePanel(compact=false){
  const f=financeSummary();
  return '<div class="finance-overview '+(compact?'compact':'')+'"><div class="finance-top"><div class="eyebrow">WEDDING FUND</div>'+btn(f.savingsSet?'貯金額を変更':'貯金額を登録','edit-savings','','ghost tiny')+'</div>'
  +'<div class="finance-main"><span>現在の貯金額</span><strong>'+ (f.savingsSet?yen(f.savings):'未登録') +'</strong></div>'
- +'<div class="finance-pairs"><div><span>これから必要な金額</span><strong>'+yen(f.required)+'</strong></div>'
- +'<div class="'+(f.shortfall?'needs-money':'enough-money')+'"><span>'+(f.savingsSet?(f.shortfall?'あと必要な金額':'残る見込み'):'不足額（貯金登録後に計算）')+'</span><strong>'+(f.savingsSet?yen(f.shortfall||f.surplus):'—')+'</strong></div></div>'
- +'<p class="finance-note">未払いの見込費用 '+yen(f.categoryFuture)+' ＋ 追加で必要 '+yen(f.extraFuture)+'<span> ／ ご祝儀・支援金をすでに貯金額へ含めている場合は再加算しません</span></p></div>';
+ +'<div class="finance-pairs"><div><span>これから必要な金額</span><strong>'+(f.costsSet?yen(f.required):'未登録')+'</strong></div>'
+ +'<div class="'+(f.shortfall?'needs-money':'enough-money')+'"><span>'+(f.savingsSet&&f.costsSet?(f.shortfall?'あと必要な金額':'残る見込み'):'不足額（登録後に計算）')+'</span><strong>'+(f.savingsSet&&f.costsSet?yen(f.shortfall||f.surplus):'—')+'</strong></div></div>'
+ +'<p class="finance-note">未払いの見込費用 '+yen(f.categoryFuture)+' ＋ 追加で必要 '+yen(f.extraFuture)+'<span> ／ 支払いを済ませたら現在の貯金額も更新してください。ご祝儀・支援金を二重計上しません</span></p></div>';
 }
 function futureSchedule(x){
  return (x.date||'')+(x.time?' '+x.time:'');

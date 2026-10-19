@@ -10,3 +10,5 @@
 .task-memo{margin:5px 0 3px;white-space:pre-wrap;overflow-wrap:anywhere;line-height:1.5}
 .task-reference{display:inline-block;margin:5px 0;color:#af7281;text-decoration:underline;text-underline-offset:3px;font-size:12px}
 .task-thumbnail{display:block;max-width:96px;max-height:76px;width:auto;height:auto;object-fit:cover;border-radius:10px;margin:6px 0;border:1px solid #f2e6e4}
+
+.bottom-nav[hidden]{display:none!important}

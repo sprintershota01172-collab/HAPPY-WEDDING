@@ -121,8 +121,8 @@ function upcomingSchedule(limit=3){
 
 function renderHome(){
  const left=distance(state.date),done=state.tasks.filter(t=>t.done).length,total=state.tasks.length;
- const near=state.tasks.filter(x=>!x.done&&x.due).sort((a,b)=>a.due.localeCompare(b.due)).slice(0,3);
- const coming=upcomingSchedule(4);
+ const near=state.tasks.filter(x=>!x.done&&x.due).sort((a,b)=>a.due.localeCompare(b.due)).slice(0,1);
+ const coming=upcomingSchedule(2);
  let h='<div class="home-event-top"><div class="home-date"><span>WEDDING DAY</span><strong>'+e(state.date.replaceAll('-',' / '))+'</strong></div><div class="home-count"><b>'+Math.abs(left)+'</b><span>'+(left>=0?'DAYS LEFT':'DAYS SINCE')+'</span></div></div>';
  h+=financePanel(true);
  h+='<div class="home-actions">'+btn('＋ 予定を登録','new-schedule','','primary')+btn('＋ 必要なもの','new-extra','','light')+btn('資金管理','nav','money','ghost')+'</div>';
@@ -487,7 +487,7 @@ async function handleAction(target){
  if(action==='generate-room'){const f=$('form[data-form=sync]');if(f){f.elements.room.value=roomCode();toast('共有コードを発行しました。接続設定を保存してください。')}return}
  if(action==='copy-room'){const val=$('form[data-form=sync]')?.elements.room.value||'';if(!val){toast('先に共有コードを発行してください');return}try{await navigator.clipboard.writeText(val);toast('共有コードをコピーしました')}catch{toast('コードを長押ししてコピーしてください')}return}
  if(action==='disconnect'){if(!confirm('クラウド接続を解除しますか？端末のデータは残ります。'))return;stopSync();cloud=null;localStorage.removeItem(CLOUD_KEY);status('local');render();return}
- if(action==='notifications'){if(!state.reminders&&'Notification' in window){try{await Notification.requestPermission()}catch{}}setSetting('reminders',!state.reminders);toast(state.reminders?'お知らせをオンにしました':'お知らせをオフにしました');return}
+ if(action==='notifications'){if(!state.reminders&&'Notification' in window){try{await Notification.requestPermission()}catch{}}setSetting('reminders',!state.reminders);toast(state.reminders?'お知らせをオンにしました':'お知らせをオフにしました');if(state.reminders)remind();return}
  if(action==='export-json'){download('happy-wedding-backup-'+today()+'.json',JSON.stringify(state,null,2),'application/json;charset=utf-8');toast('バックアップを書き出しました');return}
  if(action==='import-json'){$('#import-file')?.click();return}
  if(action==='export-csv'){const col=$('#csv-section')?.value||'tasks';download('happy-wedding-'+col+'-'+today()+'.csv',toCsv(state[col]),'text/csv;charset=utf-8');toast('CSVを書き出しました');return}

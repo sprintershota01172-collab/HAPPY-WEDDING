@@ -275,28 +275,28 @@ function savingsRows(){
 }
 function savingsAccountPage(){
  const t=savingsTotals();
- return '<div class="row between savings-heading"><b>貯金の内訳</b>'
- +btn('← 資金に戻る','money-view','overview','ghost tiny')+'</div>'
- +'<div class="savings-account-top"><div><span>すべての貯金</span><strong>'+yen(t.total)+'</strong></div>'
- +'<div><span>式・旅行に使える額</span><strong>'+yen(t.usable)+'</strong></div></div>'
- +'<div class="page-actions">'+btn('＋ 貯金・口座を追加','new-saving','','primary')+'</div>'
+ return '<div class="row between savings-heading"><b>貯金内訳</b>'
+ +btn('戻る','money-view','overview','ghost tiny')+'</div>'
+ +'<div class="savings-account-top"><div><span>貯金合計</span><strong>'+yen(t.total)+'</strong></div>'
+ +'<div><span>利用可能額</span><strong>'+yen(t.usable)+'</strong></div></div>'
+ +'<div class="page-actions">'+btn('＋ 追加','new-saving','','primary')+'</div>'
  +savingsRows()+'<p class="caption">銀行名・口座の呼び名のみ登録してください。口座番号・暗証番号は不要です。</p>';
 }
 function savingEditor(uid=''){
  const x=savingRecords().find(x=>x.id===uid)||{};
  const suggestions=(name,values)=>'<datalist id="'+name+'">'+values.map(x=>'<option value="'+e(x)+'"></option>').join('')+'</datalist>';
- const fields='<div class="field"><label for="saving-owner">誰の貯金？</label>'
+ const fields='<div class="field"><label for="saving-owner">名義</label>'
   +'<input id="saving-owner" name="owner" list="saving-owner-list" value="'+e(x.owner==='未分類'?'':x.owner||'')+'" placeholder="例：新郎／新婦／共同" required autocomplete="off">'
   +suggestions('saving-owner-list',['新郎','新婦','共同','親・家族'])+'</div>'
-  +'<div class="field"><label for="saving-purpose">何のためのお金？</label>'
+  +'<div class="field"><label for="saving-purpose">用途</label>'
   +'<input id="saving-purpose" name="purpose" list="saving-purpose-list" value="'+e(x.purpose==='用途未設定'?'':x.purpose||'')+'" placeholder="例：結婚式／新婚旅行" required autocomplete="off">'
   +suggestions('saving-purpose-list',['結婚式','新婚旅行','結婚式・新婚旅行','共有貯金','生活費','生活防衛資金','その他'])+'</div>'
-  +field('銀行・金融機関','bank','text',x.bank==='口座未設定'?'':x.bank||'',true,'autocomplete="off" placeholder="例：楽天銀行、現金"')
-  +field('口座名・ニックネーム','account','text',x.account||'',false,'autocomplete="off" placeholder="例：普通預金・共同口座"')
-  +field('現在の残高（円）','amount','number',x.amount??'',true,'min="0" inputmode="numeric"')
-  +checkField('結婚式・新婚旅行に使えるお金として計算','available',x.available!==false)
+  +field('金融機関','bank','text',x.bank==='口座未設定'?'':x.bank||'',true,'autocomplete="off" placeholder="例：楽天銀行、現金"')
+  +field('口座名','account','text',x.account||'',false,'autocomplete="off" placeholder="例：普通預金・共同口座"')
+  +field('残高（円）','amount','number',x.amount??'',true,'min="0" inputmode="numeric"')
+  +checkField('結婚式・旅行に使用する','available',x.available!==false)
   +'<p class="field-hint">口座番号・暗証番号は入力しないでください。更新すると貯金合計も再計算します。</p>';
- modal(uid?'貯金・口座の編集':'貯金・口座の追加',fields,'saving',uid);
+ modal(uid?'貯金の編集':'貯金の追加',fields,'saving',uid);
 }
 
 function financeSummary(){
@@ -313,12 +313,12 @@ function financeSummary(){
 }
 function financePanel(compact=false){
  const f=financeSummary();
- return '<div class="finance-overview '+(compact?'compact':'')+'"><div class="finance-top"><div class="eyebrow">WEDDING FUND</div>'+btn('内訳・編集','edit-savings','','ghost tiny')+'</div>'
- +'<div class="finance-main"><span>貯金の合計</span><button type="button" class="finance-amount-edit" data-action="edit-savings" aria-label="貯金額を更新"><strong>'+(f.savingsSet?yen(f.savingsTotal):'未登録')+'</strong><small aria-hidden="true">✎</small></button></div>'
- +'<div class="finance-available">式・旅行に使える額 <b>'+(f.savingsSet?yen(f.savings):'未登録')+'</b></div>'
- +'<div class="finance-pairs"><div><span>これから必要な金額</span><strong>'+(f.costsSet?yen(f.required):'未登録')+'</strong></div>'
- +'<div class="'+(f.shortfall?'needs-money':'enough-money')+'"><span>'+(f.savingsSet&&f.costsSet?(f.shortfall?'あと必要な金額':'残る見込み'):'不足額（登録後に計算）')+'</span><strong>'+(f.savingsSet&&f.costsSet?yen(f.shortfall||f.surplus):'—')+'</strong></div></div>'
- +'<p class="finance-note">未払いの見込費用 '+yen(f.categoryFuture)+' ＋ 追加で必要 '+yen(f.extraFuture)+'<span> ／ 支払いを済ませたら現在の貯金額も更新してください。ご祝儀・支援金を二重計上しません</span></p></div>';
+ return '<div class="finance-overview '+(compact?'compact':'')+'"><div class="finance-top"><div class="eyebrow">資金状況</div>'+btn('内訳','edit-savings','','ghost tiny')+'</div>'
+ +'<div class="finance-main"><span>貯金合計</span><button type="button" class="finance-amount-edit" data-action="edit-savings" aria-label="貯金額を更新"><strong>'+(f.savingsSet?yen(f.savingsTotal):'未登録')+'</strong><small aria-hidden="true">✎</small></button></div>'
+ +'<div class="finance-available">利用可能額 <b>'+(f.savingsSet?yen(f.savings):'未登録')+'</b></div>'
+ +'<div class="finance-pairs"><div><span>必要額</span><strong>'+(f.costsSet?yen(f.required):'未登録')+'</strong></div>'
+ +'<div class="'+(f.shortfall?'needs-money':'enough-money')+'"><span>'+(f.savingsSet&&f.costsSet?(f.shortfall?'不足額':'残額'):'不足額')+'</span><strong>'+(f.savingsSet&&f.costsSet?yen(f.shortfall||f.surplus):'—')+'</strong></div></div>'
+ +'<p class="finance-note">未払い '+yen(f.categoryFuture)+' ＋ 追加費用 '+yen(f.extraFuture)+'</p></div>';
 }
 function futureSchedule(x){
  return (x.date||'')+(x.time?' '+x.time:'');
@@ -371,12 +371,11 @@ function totalPaid(){return state.categories.reduce((s,c)=>s+paidCategory(c),0)}
 function forecastCat(c){return n(c.contract)>0?n(c.contract):n(c.estimate)}
 function totalForecast(){return state.categories.reduce((s,c)=>s+forecastCat(c),0)}
 function renderMoney(){
- let h=header('お金の管理',btn('＋ 追加','money-add','','primary'),'見積から支払い、ご祝儀までひと目で');
+ let h=header('お金',btn('＋ 追加','money-add','','primary'));
  h+='<div class="tabs">'+[['overview','資金'],['honeymoon','旅費'],['extras','必要品'],['categories','費用'],['payments','支払い'],['gifts','ご祝儀']].map(v=>'<button class="tab '+(moneyView===v[0]||(moneyView==='accounts'&&v[0]==='overview')?'active':'')+'" data-action="money-view" data-id="'+v[0]+'">'+v[1]+'</button>').join('')+'</div>';
  const budget=n(state.budgetTotal),travel=honeymoonQuote(),ceremonyCost=state.categories.filter(c=>c.id!==honeymoonCategory()?.id).reduce((sum,c)=>sum+(forecastCat(c)||n(c.budget)),0),cost=ceremonyCost+travel,paid=totalPaid(),gifts=totalGifts();
  if(moneyView==='overview'){
   h+=financePanel();
-  h+='<div class="savings-see-all">'+btn('誰の・どの口座の貯金？','money-view','accounts','light')+'</div>';
   h+='<div class="money-summary"><div><span>結婚式費用（見込）</span><strong>'+yen(ceremonyCost)+'</strong></div>'
    +'<div><span>新婚旅行費</span><strong>'+(honeymoonCategory()?yen(travel):'未登録')+'</strong></div>'
    +'<div><span>支払済み合計</span><strong>'+yen(paid)+'</strong></div>'

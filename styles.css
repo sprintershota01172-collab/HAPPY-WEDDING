@@ -946,3 +946,30 @@ html,body,#app,#app *,#modal,#modal *,#toast,#toast *{
  .budget-savings-info>strong{font-size:23px}
  .budget-savings>.btn{min-width:65px;font-size:10px!important}
 }
+
+
+/* r14: compact combined assets with savings / congratulatory-gift breakdown */
+.budget-funds{padding:1px 1px 9px;margin-bottom:8px;border-bottom:1px solid #e4eae2;display:flex;flex-direction:column;gap:8px;min-width:0}
+.budget-funds-top{display:flex;align-items:flex-end;justify-content:space-between;gap:8px;min-width:0}
+.budget-funds-top>div{min-width:0;display:flex;flex-direction:column;gap:3px}
+.budget-funds-top span{font-size:11px;font-weight:730;color:#708472;letter-spacing:.015em}
+.budget-funds-top strong{font:750 clamp(23px,7vw,31px)/1.2 Meiryo,"メイリオ","Hiragino Kaku Gothic ProN",sans-serif!important;color:#325744;letter-spacing:-.015em;font-variant-numeric:tabular-nums;overflow-wrap:anywhere}
+.budget-funds-top>small{font-size:9px;color:#83948a;text-align:right;white-space:normal;max-width:38%;line-height:1.4}
+.budget-funds-sources{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;min-width:0}
+.budget-fund-source{min-width:0;width:100%;display:flex;flex-direction:column;align-items:flex-start;gap:3px;text-align:left;padding:8px 10px!important;min-height:54px!important;border:1px solid #e0e9e0!important;border-radius:10px!important;background:#fff!important;color:#385b49!important}
+.budget-fund-source span{font-size:10px;color:#728679;font-weight:710}
+.budget-fund-source b{font:730 clamp(15px,4.8vw,20px)/1.2 Meiryo,"メイリオ","Hiragino Kaku Gothic ProN",sans-serif!important;font-variant-numeric:tabular-nums;letter-spacing:-.012em;overflow-wrap:anywhere}
+.budget-funds-note{color:#9b786b;font-size:9.5px;line-height:1.35}
+.budget-charts-main{gap:0!important}
+@media(max-height:700px){
+ .budget-funds{gap:5px;padding-bottom:7px;margin-bottom:5px}
+ .budget-funds-top strong{font-size:23px}
+ .budget-fund-source{padding:6px 8px!important;min-height:45px!important}
+ .budget-fund-source b{font-size:16px}
+ .budget-funds-top>small{font-size:8px}
+}
+@media(max-width:350px){
+ .budget-funds-sources{gap:5px}
+ .budget-fund-source{padding:6px!important}
+ .budget-fund-source b{font-size:14px}
+}

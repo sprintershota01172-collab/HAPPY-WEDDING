@@ -275,8 +275,7 @@ function savingsRows(){
 }
 function savingsAccountPage(){
  const t=savingsTotals();
- return '<div class="row between savings-heading"><b>貯金内訳</b>'
- +btn('戻る','money-view','overview','ghost tiny')+'</div>'
+ return '<div class="row between savings-heading"><b>貯金内訳</b></div>'
  +'<div class="savings-account-top"><div><span>貯金合計</span><strong>'+yen(t.total)+'</strong></div>'
  +'<div><span>利用可能額</span><strong>'+yen(t.usable)+'</strong></div></div>'
  +'<div class="page-actions">'+btn('＋ 追加','new-saving','','primary')+'</div>'
@@ -370,18 +369,79 @@ function paidCategory(c){return n(c.manualPaid)+state.payments.filter(p=>p.categ
 function totalPaid(){return state.categories.reduce((s,c)=>s+paidCategory(c),0)}
 function forecastCat(c){return n(c.contract)>0?n(c.contract):n(c.estimate)}
 function totalForecast(){return state.categories.reduce((s,c)=>s+forecastCat(c),0)}
+
+function budgetInsights(){
+ const honeymoonId=honeymoonCategory()?.id;
+ const estimate=c=>{
+  const planned=state.payments.filter(p=>p.category===c.id).reduce((v,p)=>v+Math.max(0,n(p.amount)),0);
+  return Math.max(0,forecastCat(c),n(c.budget),planned,paidCategory(c));
+ };
+ const parts=state.categories.filter(c=>c.id!==honeymoonId).map(c=>({name:c.name||'未分類',value:estimate(c)}));
+ const ceremonyCost=parts.reduce((v,c)=>v+c.value,0);
+ const allExpected=state.categories.reduce((v,c)=>v+estimate(c),0)+state.extras.reduce((v,x)=>v+Math.max(0,n(x.amount)),0);
+ const paymentsPaid=state.categories.reduce((v,c)=>v+Math.max(0,paidCategory(c)),0)+state.extras.filter(x=>x.paid).reduce((v,x)=>v+Math.max(0,n(x.amount)),0);
+ const paymentTotal=Math.max(paymentsPaid,allExpected);
+ const target=Math.max(0,n(state.budgetTotal)),funds=financeSummary();
+ return {parts,ceremonyCost,target,paymentPaid:paymentsPaid,paymentTotal,
+  fundingRatio:funds.costsSet&&funds.required>0&&funds.savingsSet?funds.savings/funds.required:null,
+  budgetRatio:target?ceremonyCost/target:null,paymentRatio:paymentTotal?paymentsPaid/paymentTotal:null};
+}
+function budgetRing(label,ratio,sub,kind){
+ const ready=ratio!==null&&Number.isFinite(ratio)&&ratio>=0;
+ const value=ready?Math.round(ratio*100):null,deg=ready?Math.min(360,ratio*360):0;
+ const color=kind==='budget'&&ratio>1?'#b86f78':kind==='fund'?'#759e89':kind==='paid'?'#83a2a1':'#b68c92';
+ return '<div class="budget-ring-unit"><div class="budget-ring" style="--ring-color:'+color+';--ring-deg:'+deg+'deg" role="img" aria-label="'+e(label)+' '+(ready?value+'%':'未設定')+'">'
+  +'<span class="budget-ring-center">'+(ready?value+'%':'—')+'</span></div>'
+  +'<b>'+e(label)+'</b><small>'+e(sub)+'</small></div>';
+}
+function budgetDonuts(){
+ const r=budgetInsights();
+ return '<section class="budget-charts" aria-label="貯金と予算の進捗"><div class="budget-section-title"><b>進捗グラフ</b>'+btn('予算設定','budget-total','','ghost tiny')+'</div>'
+ +'<div class="budget-ring-grid">'
+ +budgetRing('資金達成率',r.fundingRatio,r.fundingRatio===null?'未登録':'貯金 ÷ 必要額','fund')
+ +budgetRing('予算使用率',r.budgetRatio,r.budgetRatio===null?'予算未設定':r.budgetRatio>1?'予算超過':'見込 ÷ 予算','budget')
+ +budgetRing('支払進捗',r.paymentRatio,r.paymentRatio===null?'未登録':'支払済 ÷ 見込','paid')
+ +'</div></section>';
+}
+function budgetComposition(){
+ const r=budgetInsights(),sorted=r.parts.filter(x=>x.value>0).sort((a,b)=>b.value-a.value);
+ const total=sorted.reduce((v,x)=>v+x.value,0);
+ const rows=sorted.slice(0,3);
+ if(sorted.length>3)rows.push({name:'その他',value:sorted.slice(3).reduce((v,x)=>v+x.value,0)});
+ const colors=['#789a88','#bd9295','#c4aa80','#a0b0bf'];
+ return '<section class="budget-composition"><div class="budget-section-title"><b>費用内訳</b>'+btn('全項目','money-view','categories','ghost tiny')+'</div>'
+ +(total?'<div class="budget-composition-track">'+rows.map((x,i)=>'<span style="width:'+(x.value/total*100).toFixed(2)+'%;background:'+colors[i]+'"></span>').join('')+'</div>'
+  +'<div class="budget-composition-rows">'+rows.map((x,i)=>'<div class="budget-composition-row"><span><i style="background:'+colors[i]+'"></i>'+e(x.name)+'</span><strong>'+Math.round(x.value/total*100)+'%</strong><small>'+yen(x.value)+'</small></div>').join('')+'</div>'
+  :'<p class="caption">費用を登録すると内訳が表示されます。</p>')+'</section>';
+}
+function financeUpcoming(){
+ const arr=[],put=(date,time,title,type,act,id)=>{
+  if(typeof date==='string'&&/^\d{4}-\d{2}-\d{2}$/.test(date))
+   arr.push({date,time:time||'',title:title||type,type,act,id});
+ };
+ state.payments.filter(x=>!x.paid).forEach(x=>put(x.due,'',x.title,'支払い','edit-payment',x.id));
+ state.schedules.filter(x=>!x.done).forEach(x=>put(x.date,x.time,x.title,'予定','edit-schedule',x.id));
+ state.tasks.filter(x=>!x.done).forEach(x=>put(x.due,'',x.title,'タスク','edit-task',x.id));
+ state.extras.filter(x=>!x.paid).forEach(x=>put(x.due,'',x.title,'必要品','edit-extra',x.id));
+ const now=today();
+ arr.sort((a,b)=>(a.date<now?0:1)-(b.date<now?0:1)||a.date.localeCompare(b.date)||a.time.localeCompare(b.time));
+ const rows=arr.slice(0,4);
+ return '<section class="budget-upcoming"><div class="budget-section-title"><b>今後の予定</b>'+btn('＋ 追加','new-schedule','','ghost tiny')+'</div>'
+ +'<div class="budget-upcoming-rows">'+(rows.length?rows.map(x=>'<button class="budget-upcoming-row" type="button" data-action="'+x.act+'" data-id="'+e(x.id)+'">'
+  +'<time>'+e(x.date.slice(5).replace('-','/'))+(x.time?' '+e(x.time):'')+'</time><span><b>'+e(x.title)+'</b><small>'+e(x.type)+(x.date<now?' · 期限超過':'')+'</small></span><i aria-hidden="true">›</i></button>').join('')
+  :'<p class="caption">予定は未登録です。右上の追加から登録できます。</p>')+'</div>'
+ +'<p class="caption">支払い・打ち合わせ・タスクの期限を表示</p></section>';
+}
+
 function renderMoney(){
  let h=header('お金',btn('＋ 追加','money-add','','primary'));
- h+='<div class="tabs">'+[['overview','資金'],['honeymoon','旅費'],['extras','必要品'],['categories','費用'],['payments','支払い'],['gifts','ご祝儀']].map(v=>'<button class="tab '+(moneyView===v[0]||(moneyView==='accounts'&&v[0]==='overview')?'active':'')+'" data-action="money-view" data-id="'+v[0]+'">'+v[1]+'</button>').join('')+'</div>';
+ h+='<div class="tabs money-tabs">'+[['overview','資金'],['accounts','貯金'],['honeymoon','旅費'],['extras','必要品'],['categories','費用'],['payments','支払い'],['gifts','ご祝儀']].map(v=>'<button class="tab '+(moneyView===v[0]?'active':'')+'" data-action="money-view" data-id="'+v[0]+'">'+v[1]+'</button>').join('')+'</div>';
  const budget=n(state.budgetTotal),travel=honeymoonQuote(),ceremonyCost=state.categories.filter(c=>c.id!==honeymoonCategory()?.id).reduce((sum,c)=>sum+(forecastCat(c)||n(c.budget)),0),cost=ceremonyCost+travel,paid=totalPaid(),gifts=totalGifts();
  if(moneyView==='overview'){
   h+=financePanel();
-  h+='<div class="money-summary"><div><span>結婚式費用（見込）</span><strong>'+yen(ceremonyCost)+'</strong></div>'
-   +'<div><span>新婚旅行費</span><strong>'+(honeymoonCategory()?yen(travel):'未登録')+'</strong></div>'
-   +'<div><span>支払済み合計</span><strong>'+yen(paid)+'</strong></div>'
-   +'<div><span>ご祝儀・支援</span><strong>'+yen(gifts)+'</strong></div></div>';
-  h+='<div class="money-quick">'+btn('予算を設定','budget-total','','light')+btn('費用の内訳','money-view','categories','ghost')+btn('支払い予定','money-view','payments','ghost')+'</div>';
-  if(budget&&ceremonyCost>budget)h+='<div class="notice">結婚式費用が予算より '+yen(ceremonyCost-budget)+' 多い見込みです（新婚旅行費を除く）。</div>';
+  h+=budgetDonuts();
+  h+=budgetComposition();
+  h+=financeUpcoming();
  }
  if(moneyView==='accounts'){h+=savingsAccountPage();}
  if(moneyView==='honeymoon'){h+=honeymoonPanel();}

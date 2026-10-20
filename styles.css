@@ -973,3 +973,53 @@ html,body,#app,#app *,#modal,#modal *,#toast,#toast *{
  .budget-fund-source{padding:6px!important}
  .budget-fund-source b{font-size:14px}
 }
+
+/* r15: Japanese handwritten typography & clear remaining wedding funding. */
+:root{
+  --ui-num:"Klee One","Hiragino Maru Gothic ProN","Yu Gothic",sans-serif!important;
+  font-family:"Klee One","Hiragino Maru Gothic ProN","Yu Gothic",sans-serif!important;
+}
+html,body,#app,#app *,#modal,#modal *,#toast,#toast *{
+  font-family:"Klee One","Hiragino Maru Gothic ProN","Yu Gothic",sans-serif!important;
+}
+.funding-need{
+  display:flex;flex-direction:column;gap:7px;min-width:0;
+  padding:10px 11px;background:linear-gradient(122deg,#eef5ed,#fffaf4);
+  border:1px solid #dce9de;border-radius:13px;
+}
+.funding-need-result{display:flex;flex-direction:column;gap:2px;min-width:0}
+.funding-need-result>span{font-size:12px;font-weight:600;color:#59705f}
+.funding-need-result>strong{
+  font-size:clamp(25px,7.5vw,34px);font-weight:600;color:#2f5b45;
+  line-height:1.18;letter-spacing:-.025em;overflow-wrap:anywhere;
+}
+.funding-need-result>small{font-size:10px;color:#6c8573;line-height:1.3}
+.funding-need-math{
+  display:grid;grid-template-columns:minmax(0,1fr) 12px minmax(0,1fr);
+  align-items:center;gap:5px;min-width:0;
+}
+.funding-need-math>div{
+  padding:6px 8px;min-width:0;background:rgba(255,255,255,.85);
+  border-radius:8px;border:1px solid #e5ede4;display:flex;flex-direction:column;gap:3px;
+}
+.funding-need-math span{font-size:9.5px;color:#718575;font-weight:600}
+.funding-need-math b{
+  font-size:clamp(14px,4vw,18px);line-height:1.2;color:#365c48;
+  font-weight:600;font-variant-numeric:tabular-nums;overflow-wrap:anywhere;
+}
+.funding-need-math i{font-size:14px;color:#75917b;text-align:center;font-style:normal}
+.funding-need-breakdown{font-size:10px;line-height:1.35;color:#67816e;overflow-wrap:anywhere}
+.funding-need-footnote{font-size:9px;line-height:1.3;margin:0;color:#7d8c81}
+.budget-funds{gap:6px!important}
+.budget-funds-top{align-items:center}
+.budget-funds-top strong{font-size:clamp(19px,5.4vw,25px)!important}
+.budget-fund-source{min-height:46px!important;padding:6px 9px!important}
+.budget-fund-source b{font-size:clamp(13px,4vw,18px)!important}
+.budget-charts-main .budget-ring{width:clamp(65px,18vw,81px)}
+@media(max-height:700px){
+  .funding-need{padding:7px 9px;gap:5px}
+  .funding-need-result>strong{font-size:clamp(22px,6.7vw,29px)}
+  .funding-need-math>div{padding:5px 7px}
+  .funding-need-footnote{font-size:8.5px}
+  .budget-charts-main .budget-ring{width:66px}
+}

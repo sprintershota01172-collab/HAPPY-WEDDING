@@ -779,3 +779,20 @@ dialog::backdrop{background:rgba(20,35,26,.40)!important;backdrop-filter:none!im
  .savings-heading>b{font-size:13px}
  .saving-right{max-width:39%}
 }
+
+
+/* r11 — simple Money UI and Meiryo-first typography.
+   iOS does not bundle Meiryo: Hiragino Kaku Gothic is the Japanese fallback. */
+:root{
+ --ui-num:Meiryo,"メイリオ","Hiragino Kaku Gothic ProN","Yu Gothic",sans-serif!important;
+ font-family:Meiryo,"メイリオ","Hiragino Kaku Gothic ProN","Yu Gothic",sans-serif!important;
+}
+html,body,#app,#app *,#modal,#modal *,#toast,#toast *{
+ font-family:Meiryo,"メイリオ","Hiragino Kaku Gothic ProN","Yu Gothic",sans-serif!important;
+}
+.finance-overview{gap:9px!important}
+.finance-overview .eyebrow{font-size:10px!important;letter-spacing:.045em!important;font-weight:700!important;color:#77897a!important}
+.finance-overview .finance-main{gap:4px!important}
+.finance-overview .finance-note{font-size:10px!important;line-height:1.35!important;margin-top:1px!important}
+.savings-account-top{margin-top:3px}
+.savings-heading{margin-top:2px}

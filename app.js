@@ -327,7 +327,7 @@ function fundingBreakdownCard(){
  +'<small>貯金 ＋ ご祝儀・支援</small></div>'
  +'<div class="budget-funds-sources">'
  +'<button type="button" class="budget-fund-source" data-action="money-view" data-id="accounts"><span>貯金</span><b>'+(v.savingsSet?yen(v.savingsTotal):'未登録')+'</b></button>'
- +'<button type="button" class="budget-fund-source" data-action="money-view" data-id="gifts"><span>ご祝儀・支援</span><b>'+yen(v.total-v.savingsTotal+v.included)+'</b></button></div>'
+ +'<button type="button" class="budget-fund-source" data-action="money-view" data-id="gifts"><span>ご祝儀・支援</span><b>'+yen(v.giftTotal+v.guestTotal)+'</b></button></div>'
  +(v.included?'<div class="budget-funds-note">貯金に含むご祝儀 '+yen(v.included)+' は重複計上しません</div>':'')
  +'</div>';
 }

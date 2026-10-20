@@ -298,6 +298,39 @@ function savingEditor(uid=''){
  modal(uid?'貯金の編集':'貯金の追加',fields,'saving',uid);
 }
 
+
+/** Gift contributions may already be part of an entered savings balance.
+ * Count them for the gift breakdown, but only add the non-deposited portion
+ * to available wedding funds and the combined total.
+ */
+function giftFunding(){
+ const giftRows=state.gifts.map(g=>({amount:Math.max(0,n(g.amount)),included:!!g.inSavings}));
+ const guestRows=state.guests.map(g=>({amount:Math.max(0,n(g.gift)),included:!!g.giftInSavings}));
+ const giftTotal=giftRows.reduce((v,g)=>v+g.amount,0);
+ const guestTotal=guestRows.reduce((v,g)=>v+g.amount,0);
+ const included=[...giftRows,...guestRows].filter(g=>g.included).reduce((v,g)=>v+g.amount,0);
+ return {giftTotal,guestTotal,total:giftTotal+guestTotal,included,
+  additional:Math.max(0,giftTotal+guestTotal-included)};
+}
+function combinedFunding(){
+ const savings=savingsTotals(),gifts=giftFunding();
+ return {...gifts,savingsTotal:savings.total,savingsUsable:savings.usable,
+  savingsSet:savings.registered,
+  total:savings.total+gifts.additional,
+  usable:savings.usable+gifts.additional,
+  hasEntries:savings.registered||gifts.total>0};
+}
+function fundingBreakdownCard(){
+ const v=combinedFunding();
+ return '<div class="budget-funds">'
+ +'<div class="budget-funds-top"><div><span>結婚資金の合計</span><strong>'+(v.hasEntries?yen(v.total):'未登録')+'</strong></div>'
+ +'<small>貯金 ＋ ご祝儀・支援</small></div>'
+ +'<div class="budget-funds-sources">'
+ +'<button type="button" class="budget-fund-source" data-action="money-view" data-id="accounts"><span>貯金</span><b>'+(v.savingsSet?yen(v.savingsTotal):'未登録')+'</b></button>'
+ +'<button type="button" class="budget-fund-source" data-action="money-view" data-id="gifts"><span>ご祝儀・支援</span><b>'+yen(v.total-v.savingsTotal+v.included)+'</b></button></div>'
+ +(v.included?'<div class="budget-funds-note">貯金に含むご祝儀 '+yen(v.included)+' は重複計上しません</div>':'')
+ +'</div>';
+}
 function financeSummary(){
  const source=savingsTotals();
  const savingsSet=source.registered;
@@ -305,9 +338,10 @@ function financeSummary(){
  const categoryFuture=state.categories.reduce((sum,c)=>{const planned=state.payments.filter(p=>p.category===c.id).reduce((a,p)=>a+n(p.amount),0);const base=Math.max(forecastCat(c)||n(c.budget),planned);return sum+Math.max(0,base-paidCategory(c))},0);
  const extraFuture=state.extras.filter(x=>!x.paid).reduce((sum,x)=>sum+Math.max(0,n(x.amount)),0);
  const required=categoryFuture+extraFuture;
- const savings=source.usable;
+ const gifts=giftFunding();
+ const savings=source.usable+gifts.additional;
  const costsSet=state.categories.some(c=>n(c.estimate)||n(c.contract)||n(c.budget))||state.payments.length>0||state.extras.length>0;
- return {required,savings,savingsTotal:source.total,savingsSet,costsSet,categoryFuture,extraFuture,
+ return {required,savings,savingsTotal:source.total,giftsTotal:gifts.total,giftsAdditional:gifts.additional,savingsSet:savingsSet||gifts.total>0,costsSet,categoryFuture,extraFuture,
   shortfall:Math.max(0,required-savings),surplus:Math.max(0,savings-required)};
 }
 function financePanel(compact=false){
@@ -364,7 +398,7 @@ function renderTasks(){
  h+='<div class="card">'+state.roles.map(r=>{const all=state.tasks.filter(t=>t.role===r.id);return '<div class="bar-row"><div class="row between"><span><span class="role-dot" style="background:'+e(r.color)+'"></span> '+e(r.name)+'</span><small class="muted">'+all.filter(t=>t.done).length+'/'+all.length+' · '+progress(all)+'%</small></div><div class="bar-track"><span style="width:'+progress(all)+'%;background:'+e(r.color)+'"></span></div></div>'}).join('')+'</div>';
  return h;
 }
-function totalGifts(){return state.gifts.reduce((sum,x)=>sum+n(x.amount),0)+state.guests.reduce((sum,x)=>sum+n(x.gift),0)}
+function totalGifts(){return giftFunding().total}
 function paidCategory(c){return n(c.manualPaid)+state.payments.filter(p=>p.category===c.id&&p.paid).reduce((s,p)=>s+n(p.amount),0)}
 function totalPaid(){return state.categories.reduce((s,c)=>s+paidCategory(c),0)}
 function forecastCat(c){return n(c.contract)>0?n(c.contract):n(c.estimate)}
@@ -395,12 +429,9 @@ function budgetRing(label,ratio,sub,kind){
   +'<b>'+e(label)+'</b><small>'+e(sub)+'</small></div>';
 }
 function budgetDonuts(){
- const r=budgetInsights(),funds=financeSummary();
- return '<section class="budget-charts budget-charts-main" aria-label="貯金と予算の進捗">'
- +'<div class="budget-savings"><div class="budget-savings-info"><span>貯金額</span>'
- +'<strong>'+(funds.savingsSet?yen(funds.savingsTotal):'未登録')+'</strong>'
- +(funds.savingsSet&&funds.savings!==funds.savingsTotal?'<small>利用可能 '+yen(funds.savings)+'</small>':'')
- +'</div>'+btn('内訳・編集','money-view','accounts','ghost tiny')+'</div>'
+ const r=budgetInsights();
+ return '<section class="budget-charts budget-charts-main" aria-label="貯金とご祝儀・予算の進捗">'
+ +fundingBreakdownCard()
  +'<div class="budget-section-title"><b>進捗グラフ</b>'+btn('予算設定','budget-total','','ghost tiny')+'</div>'
  +'<div class="budget-ring-grid">'
  +budgetRing('資金達成率',r.fundingRatio,r.fundingRatio===null?'未登録':'貯金 ÷ 必要額','fund')
@@ -471,11 +502,13 @@ function renderMoney(){
   h+='<p class="caption">完了にした支払いは、該当する項目の「支払済み」に自動反映されます。</p>';
  }
  if(moneyView==='gifts'){
-  h+='<div class="card"><div class="small muted">ご祝儀・支援金の合計</div><div class="amount">'+yen(gifts)+'</div><div class="small muted">費用見込み − 収入 = '+yen(Math.max(0,cost-gifts))+' の持ち出し見込み</div></div>';
+  const funding=combinedFunding();
+  h+='<div class="card"><div class="small muted">ご祝儀・支援金</div><div class="amount">'+yen(gifts)+'</div>'
+    +'<div class="small muted">貯金に含む '+yen(funding.included)+' ／ 新たに加算 '+yen(funding.additional)+'</div></div>';
   h+='<div class="page-actions mb">'+btn('＋ ご祝儀を登録','new-gift','','primary')+'</div>';
   const guestGifts=state.guests.filter(x=>n(x.gift)>0);if(guestGifts.length)h+='<div class="card"><b>ゲスト別に登録したご祝儀</b><div class="small muted">'+guestGifts.map(g=>e(g.name)+' '+yen(g.gift)).join(' · ')+'</div></div>';
   h+=state.gifts.length?'<div class="list">'+state.gifts.map(g=>'<div class="item"><div class="content"><b>'+e(g.source)+'</b><div class="item-sub">'+e(g.note||'')+'</div></div><b>'+yen(g.amount)+'</b>'+btn('編集','edit-gift',g.id)+'</div>').join('')+'</div>':empty('ご祝儀や親御さんからの支援を登録できます。');
-  h+='<p class="caption">ゲスト詳細で入力したご祝儀も自動加算されます。ここに同じご祝儀を入力すると二重計上になるためご注意ください。</p>';
+  h+='<p class="caption">ゲスト詳細とこちらで同じご祝儀を二重登録しないでください。貯金残高に含めた場合は編集からチェックを入れてください。</p>';
  }
  return h;
 }
@@ -702,13 +735,13 @@ function modalEdit(type,uid=''){
  }else if(type==='payment'){
   title=uid?'支払いを編集':'支払い予定を追加';b=field('支払い内容','title','text',x.title,true)+choices('項目','category',state.categories.map(c=>[c.id,c.name]),x.category)+field('金額（円）','amount','number',x.amount||0,false,'min="0"')+field('支払期限','due','date',x.due||'')+selectField('payer','支払い担当',state.roles,x.payer||state.myRole)+checkField('支払い完了','paid',x.paid);
  }else if(type==='gift'){
-  title=uid?'ご祝儀を編集':'ご祝儀・支援金を追加';b=field('誰から・項目名','source','text',x.source,true)+field('金額（円）','amount','number',x.amount||0,false,'min="0"')+area('メモ','note',x.note||'');
+  title=uid?'ご祝儀を編集':'ご祝儀・支援金を追加';b=field('誰から・項目名','source','text',x.source,true)+field('金額（円）','amount','number',x.amount||0,false,'min="0"')+checkField('この金額は貯金残高に含まれる','inSavings',x.inSavings)+area('メモ','note',x.note||'');
  }else if(type==='guest'){
   title=uid?'ゲストを編集':'ゲストを追加';
   b='<div class="guest-steps" role="tablist" aria-label="ゲストの入力項目">'+[['basic','基本'],['care','出欠・配慮'],['details','費用・メモ']].map((part,i)=>'<button type="button" role="tab" aria-selected="'+(i===0)+'" class="guest-step-tab '+(i===0?'active':'')+'" data-action="guest-step" data-id="'+part[0]+'">'+(i+1)+' · '+part[1]+'</button>').join('')+'</div>'
    +'<div class="guest-step-panel" data-step="basic">'+field('お名前','name','text',x.name,true)+'<div class="guest-field-grid">'+choices('関係性','relation',[['親族','親族'],['友人','友人'],['職場','職場'],['その他','その他']],x.relation||'友人')+choices('招待側','side',[['新郎側','新郎側'],['新婦側','新婦側'],['両家','両家']],x.side||'新郎側')+'</div>'+field('住所','address','text',x.address||'')+'</div>'
    +'<div class="guest-step-panel" data-step="care" hidden>'+choices('出欠','status',[['pending','未回答'],['yes','出席'],['no','欠席']],x.status||'pending')+field('アレルギー・食事の配慮','allergy','text',x.allergy||'')+'<div class="guest-switch-list">'+checkField('招待状を送付済','sent',x.sent)+checkField('お車代が必要','transport',x.transport)+checkField('宿泊が必要','stay',x.stay)+'</div></div>'
-   +'<div class="guest-step-panel" data-step="details" hidden>'+field('ご祝儀（実績・円）','gift','number',x.gift||0,false,'min="0"')+field('引出物','favors','text',x.favors||'')+area('メモ','memo',x.memo||'')+'</div>';
+   +'<div class="guest-step-panel" data-step="details" hidden>'+field('ご祝儀（実績・円）','gift','number',x.gift||0,false,'min="0"')+checkField('ご祝儀は貯金残高に含まれる','giftInSavings',x.giftInSavings)+field('引出物','favors','text',x.favors||'')+area('メモ','memo',x.memo||'')+'</div>';
  }else if(type==='table'){
   title=uid?'卓を編集':'卓を追加';b=field('卓名','name','text',x.name||('卓'+(state.tables.length+1)),true)+field('人数の目安','capacity','number',x.capacity||8,false,'min="1" max="30"');
  }else if(type==='role'){
@@ -831,7 +864,8 @@ async function submit(form){
  if(type==='gift'){item.amount=Math.max(0,n(v.amount))}
  if(type==='present'&&(!v.sender?.trim()||!v.received?.trim())){showGuestStep('received');(v.sender?.trim()?form.elements.received:form.elements.sender)?.focus();toast('贈ってくれた人とお祝いの内容を入力してください');return}
  if(type==='guest'&&!v.name?.trim()){showGuestStep('basic');form.elements.name?.focus();toast('ゲストのお名前を入力してください');return}
- if(type==='guest'){item.gift=Math.max(0,n(v.gift));for(const x of ['transport','stay','sent'])item[x]=flBool(f,x)}
+ if(type==='guest'){item.gift=Math.max(0,n(v.gift));item.giftInSavings=flBool(f,'giftInSavings');for(const x of ['transport','stay','sent'])item[x]=flBool(f,x)}
+ if(type==='gift'){item.amount=Math.max(0,n(v.amount));item.inSavings=flBool(f,'inSavings')}
  if(type==='table'){item.capacity=Math.max(1,n(v.capacity)||8)}
  if(type==='role'){item.color=v.color}
  if(type==='idea'){item.url=safeUrl(v.url);if(flBool(f,'removePhoto'))delete item.photo}

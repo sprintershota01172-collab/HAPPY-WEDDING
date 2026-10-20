@@ -395,8 +395,13 @@ function budgetRing(label,ratio,sub,kind){
   +'<b>'+e(label)+'</b><small>'+e(sub)+'</small></div>';
 }
 function budgetDonuts(){
- const r=budgetInsights();
- return '<section class="budget-charts" aria-label="貯金と予算の進捗"><div class="budget-section-title"><b>進捗グラフ</b>'+btn('予算設定','budget-total','','ghost tiny')+'</div>'
+ const r=budgetInsights(),funds=financeSummary();
+ return '<section class="budget-charts budget-charts-main" aria-label="貯金と予算の進捗">'
+ +'<div class="budget-savings"><div class="budget-savings-info"><span>貯金額</span>'
+ +'<strong>'+(funds.savingsSet?yen(funds.savingsTotal):'未登録')+'</strong>'
+ +(funds.savingsSet&&funds.savings!==funds.savingsTotal?'<small>利用可能 '+yen(funds.savings)+'</small>':'')
+ +'</div>'+btn('内訳・編集','money-view','accounts','ghost tiny')+'</div>'
+ +'<div class="budget-section-title"><b>進捗グラフ</b>'+btn('予算設定','budget-total','','ghost tiny')+'</div>'
  +'<div class="budget-ring-grid">'
  +budgetRing('資金達成率',r.fundingRatio,r.fundingRatio===null?'未登録':'貯金 ÷ 必要額','fund')
  +budgetRing('予算使用率',r.budgetRatio,r.budgetRatio===null?'予算未設定':r.budgetRatio>1?'予算超過':'見込 ÷ 予算','budget')
@@ -425,12 +430,12 @@ function financeUpcoming(){
  state.extras.filter(x=>!x.paid).forEach(x=>put(x.due,'',x.title,'必要品','edit-extra',x.id));
  const now=today();
  arr.sort((a,b)=>(a.date<now?0:1)-(b.date<now?0:1)||a.date.localeCompare(b.date)||a.time.localeCompare(b.time));
- const rows=arr.slice(0,4);
- return '<section class="budget-upcoming"><div class="budget-section-title"><b>今後の予定</b>'+btn('＋ 追加','new-schedule','','ghost tiny')+'</div>'
+ const rows=arr.slice(0,2);
+ return '<section class="budget-upcoming"><div class="budget-section-title"><b>今後の予定</b>'+btn('一覧','more','appointments','ghost tiny')+'</div>'
  +'<div class="budget-upcoming-rows">'+(rows.length?rows.map(x=>'<button class="budget-upcoming-row" type="button" data-action="'+x.act+'" data-id="'+e(x.id)+'">'
   +'<time>'+e(x.date.slice(5).replace('-','/'))+(x.time?' '+e(x.time):'')+'</time><span><b>'+e(x.title)+'</b><small>'+e(x.type)+(x.date<now?' · 期限超過':'')+'</small></span><i aria-hidden="true">›</i></button>').join('')
   :'<p class="caption">予定は未登録です。右上の追加から登録できます。</p>')+'</div>'
- +'<p class="caption">支払い・打ち合わせ・タスクの期限を表示</p></section>';
+ +'</section>';
 }
 
 function renderMoney(){
@@ -438,7 +443,6 @@ function renderMoney(){
  h+='<div class="tabs money-tabs">'+[['overview','資金'],['accounts','貯金'],['honeymoon','旅費'],['extras','必要品'],['categories','費用'],['payments','支払い'],['gifts','ご祝儀']].map(v=>'<button class="tab '+(moneyView===v[0]?'active':'')+'" data-action="money-view" data-id="'+v[0]+'">'+v[1]+'</button>').join('')+'</div>';
  const budget=n(state.budgetTotal),travel=honeymoonQuote(),ceremonyCost=state.categories.filter(c=>c.id!==honeymoonCategory()?.id).reduce((sum,c)=>sum+(forecastCat(c)||n(c.budget)),0),cost=ceremonyCost+travel,paid=totalPaid(),gifts=totalGifts();
  if(moneyView==='overview'){
-  h+=financePanel();
   h+=budgetDonuts();
   h+=budgetComposition();
   h+=financeUpcoming();

@@ -896,3 +896,53 @@ html,body,#app,#app *,#modal,#modal *,#toast,#toast *{
  .budget-section-title{margin-bottom:5px}
  .budget-upcoming-row{min-height:38px}
 }
+
+
+/* r13 — single financial overview: savings and donuts share one card */
+.budget-charts-main{
+ display:flex;
+ flex-direction:column;
+ gap:0;
+ background:linear-gradient(160deg,#fdfefb 0%,#f5f8f3 100%);
+ border-color:#dce7dc;
+ padding:12px 13px!important;
+}
+.budget-savings{
+ display:flex;align-items:center;justify-content:space-between;gap:12px;
+ min-height:60px;padding:1px 1px 10px;
+ margin:0 0 10px;border-bottom:1px solid #e2e9e0;min-width:0;
+}
+.budget-savings-info{
+ display:flex;flex-direction:column;align-items:flex-start;gap:3px;min-width:0;flex:1;
+}
+.budget-savings-info>span{
+ font-size:11px;font-weight:730;letter-spacing:.015em;color:#738578;
+}
+.budget-savings-info>strong{
+ font-family:Meiryo,"メイリオ","Hiragino Kaku Gothic ProN",sans-serif!important;
+ font-variant-numeric:tabular-nums;
+ font-size:clamp(23px,6.5vw,30px);line-height:1.22;
+ font-weight:740;letter-spacing:-.014em;color:#355847;
+ max-width:100%;overflow-wrap:anywhere;
+}
+.budget-savings-info>small{font-size:10px;color:#7b8e80}
+.budget-savings>.btn{
+ min-width:72px;flex:0 0 auto;align-self:center;
+ padding:7px 9px!important;font-size:10.5px!important;
+ white-space:nowrap;border:1px solid #dbe6dc!important;
+ background:white!important;color:#426451!important;
+}
+.budget-charts-main .budget-section-title{margin-bottom:8px}
+.budget-charts-main .budget-ring-grid{margin:0}
+@media(max-height:700px){
+ .budget-charts-main{padding:9px 11px!important}
+ .budget-savings{min-height:49px;padding-bottom:7px;margin-bottom:7px}
+ .budget-savings-info>strong{font-size:24px}
+ .budget-charts-main .budget-section-title{margin-bottom:4px}
+ .budget-upcoming-row:nth-of-type(n+2){display:none}
+}
+@media(max-width:360px){
+ .budget-savings{gap:7px}
+ .budget-savings-info>strong{font-size:23px}
+ .budget-savings>.btn{min-width:65px;font-size:10px!important}
+}

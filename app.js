@@ -321,28 +321,55 @@ function combinedFunding(){
   hasEntries:savings.registered||gifts.total>0};
 }
 function fundingBreakdownCard(){
- const v=combinedFunding();
- return '<div class="budget-funds">'
- +'<div class="budget-funds-top"><div><span>結婚資金の合計</span><strong>'+(v.hasEntries?yen(v.total):'未登録')+'</strong></div>'
- +'<small>貯金 ＋ ご祝儀・支援</small></div>'
- +'<div class="budget-funds-sources">'
- +'<button type="button" class="budget-fund-source" data-action="money-view" data-id="accounts"><span>貯金</span><b>'+(v.savingsSet?yen(v.savingsTotal):'未登録')+'</b></button>'
- +'<button type="button" class="budget-fund-source" data-action="money-view" data-id="gifts"><span>ご祝儀・支援</span><b>'+yen(v.giftTotal+v.guestTotal)+'</b></button></div>'
- +(v.included?'<div class="budget-funds-note">貯金に含むご祝儀 '+yen(v.included)+' は重複計上しません</div>':'')
- +'</div>';
+  const v=combinedFunding(), f=financeSummary();
+  const ready=f.costsSet&&f.savingsSet;
+  const remainingLabel=ready?yen(f.shortfall):'—';
+  const needLabel=f.costsSet?yen(f.required):'未登録';
+  const usableLabel=f.savingsSet?yen(f.savings):'未登録';
+  const info=!f.costsSet?'式の予算・旅費・必要品を入力すると計算できます':
+    !f.savingsSet?'貯金やご祝儀を登録すると、不足額を計算できます':
+    f.shortfall>0?'追加で準備したい金額':
+    '必要な資金は確保済み · 余裕 '+yen(f.surplus);
+  return '<div class="budget-funds">'
+  +'<div class="funding-need" aria-label="これから必要な結婚資金">'
+  +'<div class="funding-need-result"><span>あと必要な金額</span><strong>'+remainingLabel+'</strong><small>'+info+'</small></div>'
+  +'<div class="funding-need-math"><div><span>これから支払う額</span><b>'+needLabel+'</b></div><i aria-hidden="true">−</i><div><span>使える資金</span><b>'+usableLabel+'</b></div></div>'
+  +(f.costsSet?'<div class="funding-need-breakdown">式 '+yen(f.ceremonyFuture)+' ／ 旅行 '+yen(f.travelFuture)+(f.extraFuture?' ／ 必要品 '+yen(f.extraFuture):'')+'</div>':'')
+  +'</div>'
+  +'<div class="budget-funds-top"><div><span>結婚資金の合計</span><strong>'+(v.hasEntries?yen(v.total):'未登録')+'</strong></div>'
+  +'<small>貯金 ＋ ご祝儀・支援</small></div>'
+  +'<div class="budget-funds-sources">'
+  +'<button type="button" class="budget-fund-source" data-action="money-view" data-id="accounts"><span>貯金</span><b>'+(v.savingsSet?yen(v.savingsTotal):'未登録')+'</b></button>'
+  +'<button type="button" class="budget-fund-source" data-action="money-view" data-id="gifts"><span>ご祝儀・支援</span><b>'+yen(v.giftTotal+v.guestTotal)+'</b></button></div>'
+  +(v.included?'<div class="budget-funds-note">貯金に含むご祝儀 '+yen(v.included)+' は重複計上しません</div>':'')
+  +'<p class="funding-need-footnote">「あと必要」は未払いの式・旅費・必要品 − 使用可能な資金。生活費など対象外の貯金は含めません。</p>'
+  +'</div>';
 }
 function financeSummary(){
- const source=savingsTotals();
- const savingsSet=source.registered;
- // Until contracted/estimated, the category's provisional budget is counted.
- const categoryFuture=state.categories.reduce((sum,c)=>{const planned=state.payments.filter(p=>p.category===c.id).reduce((a,p)=>a+n(p.amount),0);const base=Math.max(forecastCat(c)||n(c.budget),planned);return sum+Math.max(0,base-paidCategory(c))},0);
- const extraFuture=state.extras.filter(x=>!x.paid).reduce((sum,x)=>sum+Math.max(0,n(x.amount)),0);
- const required=categoryFuture+extraFuture;
- const gifts=giftFunding();
- const savings=source.usable+gifts.additional;
- const costsSet=state.categories.some(c=>n(c.estimate)||n(c.contract)||n(c.budget))||state.payments.length>0||state.extras.length>0;
- return {required,savings,savingsTotal:source.total,giftsTotal:gifts.total,giftsAdditional:gifts.additional,savingsSet:savingsSet||gifts.total>0,costsSet,categoryFuture,extraFuture,
-  shortfall:Math.max(0,required-savings),surplus:Math.max(0,savings-required)};
+  const source=savingsTotals(), gifts=giftFunding(), honeymoon=honeymoonCategory();
+  const plannedFor=c=>{
+    const payments=state.payments.filter(p=>p.category===c.id).reduce((sum,p)=>sum+Math.max(0,n(p.amount)),0);
+    return Math.max(0,forecastCat(c),n(c.budget),payments,paidCategory(c));
+  };
+  const ceremonyCats=state.categories.filter(c=>c.id!==honeymoon?.id);
+  const ceremonyItemTotal=ceremonyCats.reduce((sum,c)=>sum+plannedFor(c),0);
+  // The wedding budget serves as a fallback while some detailed costs are not registered.
+  const weddingPlan=Math.max(ceremonyItemTotal,Math.max(0,n(state.budgetTotal)));
+  const weddingPaid=ceremonyCats.reduce((sum,c)=>sum+Math.max(0,paidCategory(c)),0);
+  const travelPlan=honeymoon?plannedFor(honeymoon):0;
+  const travelPaid=honeymoon?Math.max(0,paidCategory(honeymoon)):0;
+  const ceremonyFuture=Math.max(0,weddingPlan-weddingPaid);
+  const travelFuture=Math.max(0,travelPlan-travelPaid);
+  const categoryFuture=ceremonyFuture+travelFuture;
+  const extraFuture=state.extras.filter(x=>!x.paid).reduce((sum,x)=>sum+Math.max(0,n(x.amount)),0);
+  const required=categoryFuture+extraFuture;
+  const savings=source.usable+gifts.additional;
+  const costsSet=weddingPlan>0||travelPlan>0||state.payments.length>0||state.extras.length>0;
+  const savingsSet=source.registered||gifts.total>0;
+  return {required,savings,savingsTotal:source.total,giftsTotal:gifts.total,
+    giftsAdditional:gifts.additional,savingsSet,costsSet,categoryFuture,extraFuture,
+    ceremonyFuture,travelFuture,weddingPlan,travelPlan,
+    shortfall:Math.max(0,required-savings),surplus:Math.max(0,savings-required)};
 }
 function financePanel(compact=false){
  const f=financeSummary();
@@ -434,7 +461,7 @@ function budgetDonuts(){
  +fundingBreakdownCard()
  +'<div class="budget-section-title"><b>進捗グラフ</b>'+btn('予算設定','budget-total','','ghost tiny')+'</div>'
  +'<div class="budget-ring-grid">'
- +budgetRing('資金達成率',r.fundingRatio,r.fundingRatio===null?'未登録':'貯金 ÷ 必要額','fund')
+ +budgetRing('資金達成率',r.fundingRatio,r.fundingRatio===null?'未登録':'使える資金 ÷ 未払い額','fund')
  +budgetRing('予算使用率',r.budgetRatio,r.budgetRatio===null?'予算未設定':r.budgetRatio>1?'予算超過':'見込 ÷ 予算','budget')
  +budgetRing('支払進捗',r.paymentRatio,r.paymentRatio===null?'未登録':'支払済 ÷ 見込','paid')
  +'</div></section>';

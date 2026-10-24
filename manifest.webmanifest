@@ -9,7 +9,13 @@
   "theme_color": "#FCFAE9",
   "icons": [
     {
-      "src": "./icon.svg?v=20261024r23",
+      "src": "./sakura-vow-icon.jpg?v=20261024r24",
+      "sizes": "128x128",
+      "type": "image/jpeg",
+      "purpose": "any"
+    },
+    {
+      "src": "./icon.svg?v=20261024r24",
       "sizes": "any",
       "type": "image/svg+xml",
       "purpose": "any maskable"

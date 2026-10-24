@@ -570,6 +570,13 @@ function openMoneyDetails(kind){
      ).join('')+'</div></details></div></section>'
    ).join('')+'</div>':'<p class="money-detail-empty">貯金の登録はまだありません。</p>')
    +'<p class="money-detail-footnote">追加した金額は合計に加算されます。以前の登録も残ります。</p>';
+ }else if(kind==='forecast'){
+  const f=incomeForecast();
+  title='将来入るお金';
+  body='<div class="money-detail-lead">入金予定 '+yen(f.total)+'</div>'
+   +btn('＋ 入金予定を登録','new-income-forecast','','money-detail-add')
+   +plannedIncomeRows()
+   +'<p class="money-detail-footnote">この金額は予測です。実際に入ったら「貯金を追加」から実績を登録し、予定を削除してください。</p>';
  }else if(kind==='gifts'){
   const total=giftFunding(),guestGifts=state.guests.filter(g=>n(g.gift)>0);
   title='ご祝儀・支援金';
@@ -621,6 +628,8 @@ function renderMoney(){
  const available=f.savings;
  const ratio=f.required>0?Math.max(0,Math.min(100,Math.round(available/f.required*100))):(known?100:0);
  const gifts=v.giftTotal+v.guestTotal;
+ const expected=incomeForecast();
+ const predictedMissing=Math.max(0,f.required-f.savings-expected.total);
  const missing=(!f.weddingPlan?'結婚式 ':'')+(!f.travelPlan?'新婚旅行':'');
  const glyphs={
   wedding:'<circle cx="9" cy="12" r="5"/><circle cx="15" cy="12" r="5"/>',
@@ -666,11 +675,16 @@ function renderMoney(){
   +editable('貯金',v.savingsSet?v.savingsTotal:null,'money-detail','accounts','saving')
   +editable('ご祝儀・支援',gifts,'money-detail','gifts','gift')
   +'</section>'
+  +'<button type="button" class="money-forecast-strip" data-action="money-detail" data-id="forecast">'
+  +'<span class="money-forecast-icon" aria-hidden="true">↗</span>'
+  +'<span class="money-forecast-label"><b>これから入るお金</b><small>入金予定 '+expected.count+'件</small></span>'
+  +'<strong>'+yen(expected.total)+'</strong><span aria-hidden="true">›</span></button>'
+  +(expected.total>0&&known?'<div class="money-forecast-outcome"><span>入金予定を含めた不足額</span><b>'+yen(predictedMissing)+'</b></div>':'')
   +'<section class="money-actions" aria-label="資金を登録・確認">'
   +btn('＋ 貯金','new-saving','','money-action')
   +btn('＋ ご祝儀','new-gift','','money-action')
   +btn('支払い','money-detail','payments','money-action')
-  +btn('内訳','money-detail','costs','money-action')
+  +btn('入金予定','new-income-forecast','','money-action')
   +'</section>'
   +(v.included?'<p class="money-help">ご祝儀 '+yen(v.included)+' は貯金に含まれています</p>':'')
   +'</div>';

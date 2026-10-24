@@ -1,4 +1,4 @@
-# Happy Wedding ✿
+# Sakura Vow — Cherry Blossom
 
 **ふたりで楽しく進める、スマホ向け結婚式準備アプリ。**
 
@@ -215,3 +215,11 @@ https://github.com/sprintershota01172-collab/HAPPY-WEDDING
 - **既存データでは新しいチェックは未選択です。** 既に貯金に移したご祝儀や親からの支援金があれば、必ず該当明細を編集してチェックしてください。ゲスト入力欄と「ご祝儀」明細で同じ金額を二度登録しないでください。
 - 現物のお祝い・商品券は「お祝い」台帳のままで、自動的に現金資金には加算されません。元の登録データは消去しません。
 - これまでのグラフ中心・ページ切替・メイリオ優先・スクロールなしを維持。
+
+
+## Sakura Vow (2026-10-24)
+
+- English brand name, cherry-blossom-only app icon and yamabuki-green/pale-yellow theme.
+- `plannedIncome`: expected future income (name, amount and expected date) is saved and synchronized separately from `savingsAccounts` actual savings; expected funds never raise current cash or hide current shortfall.
+- Future income is visible in the money overview and can be edited/deleted from the forecast panel. After a deposit is received, register it as an actual saving and remove the forecast entry to avoid double counting in the projection.
+- Old savings, expenses and gifts remain in the same local storage key; existing data is not reset by rebranding.

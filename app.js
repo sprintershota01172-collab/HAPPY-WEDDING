@@ -574,46 +574,48 @@ function openMoneyDetails(kind){
 }
 function renderMoney(){
  const f=financeSummary(),v=combinedFunding();
- const hasCost=f.weddingPlan>0||f.travelPlan>0||f.extraFuture>0;
-  const remaining=f.shortfall;
- const covered=hasCost&&remaining===0;
- const amountText=hasCost?yen(covered?f.surplus:remaining):'<span class="money-dash">—</span>';
- const paid=f.weddingPlan+f.travelPlan+state.extras.reduce((sum,x)=>sum+Math.max(0,n(x.amount)),0)-f.required;
- const rawPercent=f.required>0?Math.round(f.savings/f.required*100):0;
- let h=header('お金',btn('＋ 登録','money-add','','money-add-subtle'));
+ const known=f.weddingPlan>0||f.travelPlan>0||f.extraFuture>0;
+ const enough=known&&f.shortfall===0;
+ const available=f.savings;
+ const ratio=f.required>0?Math.max(0,Math.min(100,Math.round(available/f.required*100))):(known?100:0);
+ const gifts=v.giftTotal+v.guestTotal;
+ const missing=(!f.weddingPlan?'結婚式 ':'')+(!f.travelPlan?'新婚旅行':'');
+ const editable=(label,value,action,arg,iconName)=>{
+  return '<button type="button" class="money-tile" data-action="'+action+'" '+(arg?'data-id="'+arg+'"':'')+'>'
+    +'<div class="money-tile-top"><span class="money-tile-icon" aria-hidden="true">'+iconName+'</span><span class="money-tile-name">'+label+'</span><span class="money-tile-arrow" aria-hidden="true">↗</span></div>'
+    +'<strong>'+ (value===null?'<span class="money-blank">―</span>':yen(value))+'</strong></button>';
+ };
+ let h=header('お金',btn('＋','money-add','','money-add-subtle'));
  h+='<div class="money-dashboard">'
-  +'<section class="money-status" aria-label="必要な結婚資金">'
-  +'<div class="money-status-label">'+(covered?'残る資金':'あと準備するお金')+'</div>'
-  +'<div class="money-status-value" aria-live="polite">'+amountText+'</div>'
-  +'<div class="money-status-equation"><span>これから支払う <b>'+yen(f.required)+'</b></span><span>使えるお金 <b>'+yen(f.savings)+'</b></span></div>'
-  +'<div class="money-status-meter" role="progressbar" aria-label="未払い費用に対する資金の準備率" aria-valuemin="0" aria-valuemax="100" aria-valuenow="'+Math.max(0,Math.min(100,rawPercent))+'"><span style="width:'+Math.max(0,Math.min(100,rawPercent))+'%"></span></div>'
-  +'<p class="money-status-note">'+(!hasCost?'結婚式の金額を入力すると計算します。':(!f.weddingPlan||!f.travelPlan?'※ 入力済みの費用だけで計算しています。':(covered?'未払い費用をまかなえる見込みです。':'未払い費用と使える資金の差額です。')))+'</p>'
+  +'<section class="money-status" aria-label="資金状況">'
+  +'<div class="money-status-label">'+(enough?'残るお金':'あと必要なお金')+'</div>'
+  +'<div class="money-status-value" aria-live="polite">'+(known?yen(enough?f.surplus:f.shortfall):'<span class="money-blank">―</span>')+'</div>'
+  +'<div class="money-status-meter" role="progressbar" aria-label="準備できた資金の割合" aria-valuemin="0" aria-valuemax="100" aria-valuenow="'+ratio+'"><span style="width:'+ratio+'%"></span></div>'
+  +'<div class="money-status-figures"><span><small>支払う</small><b>'+yen(f.required)+'</b></span>'
+  +'<span><small>使える</small><b>'+yen(available)+'</b></span></div>'
+  +(!known?'<div class="money-status-hint">結婚式の費用を登録してください</div>':
+    missing.trim()?'<div class="money-status-hint">※ '+missing.trim()+'は未入力</div>':'')
   +'</section>'
-  +'<section class="money-section"><div class="money-section-heading"><b>かかるお金</b><span>見込み額</span></div>'
-  +'<div class="money-figure-grid">'
-  +moneyFigure('結婚式',f.weddingPlan?yen(f.weddingPlan):'<i>―</i>','budget-total','金額を変更')
-  +moneyFigure('新婚旅行',f.travelPlan?yen(f.travelPlan):'<i>―</i>','edit-honeymoon','金額を変更')
-  +'</div>'
-  +(paid>0?'<div class="money-section-foot">支払済み '+yen(Math.max(0,paid))+' <span>（費用から差し引き済み）</span></div>':'')
+  +'<div class="money-group-heading"><b>支出</b><span>金額をタップして編集</span></div>'
+  +'<section class="money-tile-grid" aria-label="支出">'
+  +editable('結婚式',f.weddingPlan||null,'budget-total','','♡')
+  +editable('新婚旅行',f.travelPlan||null,'edit-honeymoon','','✈')
   +'</section>'
-  +'<section class="money-section"><div class="money-section-heading"><b>用意できているお金</b><span>'+yen(v.total)+'</span></div>'
-  +'<div class="money-figure-grid">'
-  +moneyFigure('貯金',v.savingsSet?yen(v.savingsTotal):'<i>―</i>','money-detail','明細を見る','accounts')
-  +moneyFigure('ご祝儀・支援',yen(v.giftTotal+v.guestTotal),'money-detail','明細を見る','gifts')
-  +'</div>'
-  +(v.included?'<div class="money-section-foot">ご祝儀のうち '+yen(v.included)+' は貯金に含まれます</div>':'')
+  +'<div class="money-group-heading"><b>資金</b><span>合計 '+yen(v.total)+'</span></div>'
+  +'<section class="money-tile-grid" aria-label="資金">'
+  +editable('貯金',v.savingsSet?v.savingsTotal:null,'money-detail','accounts','◈')
+  +editable('ご祝儀・支援',gifts,'money-detail','gifts','✧')
   +'</section>'
-  +'<section class="money-quick"><div class="money-quick-heading">登録・管理</div>'
-  +'<div class="money-quick-grid">'
-  +btn('＋ 貯金','new-saving','','money-quick-action')
-  +btn('＋ ご祝儀','new-gift','','money-quick-action')
-  +btn('支払い','money-detail','payments','money-quick-action')
-  +btn('費用内訳','money-detail','costs','money-quick-action')
-  +'</div></section>'
+  +'<section class="money-actions" aria-label="資金を登録・確認">'
+  +btn('貯金を追加','new-saving','','money-action')
+  +btn('ご祝儀を追加','new-gift','','money-action')
+  +btn('支払い','money-detail','payments','money-action')
+  +btn('費用内訳','money-detail','costs','money-action')
+  +'</section>'
+  +(v.included?'<p class="money-help">ご祝儀 '+yen(v.included)+' は貯金に含まれています</p>':'')
   +'</div>';
  return h;
 }
-
 function paymentCalendar(){
  const [year,month]=paymentMonth.split('-').map(Number),first=new Date(year,month-1,1).getDay(),last=new Date(year,month,0).getDate();
  const weekdays=['日','月','火','水','木','金','土'];let h='<div class="card"><div class="row between mb">'+btn('‹ 前月','pay-month','-1')+'<b>'+year+'年'+month+'月</b>'+btn('翌月 ›','pay-month','1')+'</div><div class="calendar-grid">'+weekdays.map((d,i)=>'<div class="calendar-weekday '+(i===0?'error':'')+'">'+d+'</div>').join('');
@@ -1121,7 +1123,7 @@ async function handleAction(target){
  +field('支払済み（円）','honeymoonPaid','number',c?.manualPaid||0,false,'min="0" inputmode="numeric"')
  +field('旅行予算（円）','honeymoonBudget','number',c?.budget||0,false,'min="0" inputmode="numeric"')
  +'<p class="field-hint">支払いタブで登録済みの金額は重複入力しないでください。</p></div></details>','honeymoon');return}
- if(action==='budget-total'){if(dialog.open)closeModal();modal('結婚式の総額','<p class="simple-editor-intro">会場の見積総額を入力してください。</p>'+field('結婚式の見積総額（円）','budget','number',state.budgetTotal,true,'min="0" inputmode="numeric"'),'budget-total');return}
+ if(action==='budget-total'){if(dialog.open)closeModal();modal('結婚式の総額',field('結婚式の見積総額（円）','budget','number',state.budgetTotal,true,'min="0" inputmode="numeric"'),'budget-total');return}
  if(action==='comment'){modal('ふたりのひとこと',area('メッセージ','text'),'comment');return}
  if(action==='toggle-task'){const x=state.tasks.find(t=>t.id===uid);if(x){write('tasks',{...x,done:!x.done});if(!x.done){completion();toast('おつかれさま！ひとつ完了 ✿')}}return}
  if(action==='toggle-subtask'){const x=state.tasks.find(t=>t.id===uid);if(x){const subId=target.dataset.subid;write('tasks',{...x,subtasks:(x.subtasks||[]).map(a=>a.id===subId?{...a,done:!a.done}:a)})}return}

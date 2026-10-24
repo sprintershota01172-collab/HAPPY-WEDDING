@@ -1,5 +1,5 @@
-const CACHE = 'sakura-vow-v27-20261024r23';
-const SHELL = ['./','./index.html','./styles.css?v=20261024r23','./app.js?v=20261024r23','./sync.js','./notifications.js','./manifest.webmanifest','./icon.svg?v=20261024r23'];
+const CACHE = 'sakura-vow-v28-20261024r24';
+const SHELL = ['./','./index.html','./styles.css?v=20261024r24','./app.js?v=20261024r24','./sync.js','./notifications.js','./manifest.webmanifest','./icon.svg?v=20261024r24','./sakura-vow-icon.jpg?v=20261024r24'];
 self.addEventListener('install', e => { e.waitUntil(caches.open(CACHE).then(c=>c.addAll(SHELL)).then(()=>self.skipWaiting())); });
 self.addEventListener('activate', e => { e.waitUntil(caches.keys().then(keys=>Promise.all(keys.filter(k=>k!==CACHE).map(k=>caches.delete(k)))).then(()=>self.clients.claim())); });
 self.addEventListener('fetch',event=>{

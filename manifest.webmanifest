@@ -1,15 +1,15 @@
 {
-  "name": "Happy Wedding — ふたりの結婚式準備",
-  "short_name": "Happy Wedding",
+  "name": "Sakura Vow — Wedding Planner",
+  "short_name": "Sakura Vow",
   "description": "結婚式準備をふたりで楽しく管理",
   "start_url": "./",
   "scope": "./",
   "display": "standalone",
-  "background_color": "#faf8f5",
-  "theme_color": "#faf8f5",
+  "background_color": "#FCFAE9",
+  "theme_color": "#FCFAE9",
   "icons": [
     {
-      "src": "./icon.svg",
+      "src": "./icon.svg?v=20261024r23",
       "sizes": "any",
       "type": "image/svg+xml",
       "purpose": "any maskable"

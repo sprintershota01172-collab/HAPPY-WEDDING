@@ -990,6 +990,7 @@ async function submit(form){
    account:(v.account||'').trim(),amount:Math.max(0,n(v.amount)),available:flBool(f,'available'),
    date:(v.date||'').trim()||(uid?before.date||'':today()),note:(v.note||'').trim(),kind:uid?(before.kind||'balance'):'addition'};
   delete row.legacy;
+  pageByKey.delete('money|overview');
   closeModal();
   write('savingsAccounts',row);
   toast(uid?'貯金の記録を更新しました':'貯金に '+yen(row.amount)+' を追加しました');return

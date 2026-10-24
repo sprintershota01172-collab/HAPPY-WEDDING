@@ -1,5 +1,5 @@
-const CACHE = 'happy-wedding-v26-20261024r22';
-const SHELL = ['./','./index.html','./styles.css?v=20261024r22','./app.js?v=20261024r22','./sync.js','./notifications.js','./manifest.webmanifest','./icon.svg'];
+const CACHE = 'sakura-vow-v27-20261024r23';
+const SHELL = ['./','./index.html','./styles.css?v=20261024r23','./app.js?v=20261024r23','./sync.js','./notifications.js','./manifest.webmanifest','./icon.svg?v=20261024r23'];
 self.addEventListener('install', e => { e.waitUntil(caches.open(CACHE).then(c=>c.addAll(SHELL)).then(()=>self.skipWaiting())); });
 self.addEventListener('activate', e => { e.waitUntil(caches.keys().then(keys=>Promise.all(keys.filter(k=>k!==CACHE).map(k=>caches.delete(k)))).then(()=>self.clients.claim())); });
 self.addEventListener('fetch',event=>{
@@ -26,7 +26,7 @@ self.addEventListener('message',e=>{if(e.data?.type==='SKIP_WAITING')self.skipWa
 self.addEventListener('push', event => {
  let data={};
  try{data=event.data?.json()||{}}catch{}
- const title='Happy Wedding';
+ const title='Sakura Vow';
  const body='パートナーが結婚式の準備を更新しました';
  event.waitUntil(self.registration.showNotification(title,{
   body,icon:'./icon.svg',badge:'./icon.svg',tag:'partner-update',

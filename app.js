@@ -340,6 +340,7 @@ function fundingBreakdownCard(){
   +'<div class="budget-funds-sources">'
   +'<button type="button" class="budget-fund-source" data-action="money-view" data-id="accounts"><span>貯金</span><b>'+(v.savingsSet?yen(v.savingsTotal):missing)+'</b></button>'
   +'<button type="button" class="budget-fund-source" data-action="money-view" data-id="gifts"><span>ご祝儀・支援</span><b>'+yen(v.giftTotal+v.guestTotal)+'</b></button></div>'
+  +'<button type="button" class="funding-add-gift" data-action="new-gift">＋ ご祝儀を追加</button>'
   +(v.included?'<div class="budget-funds-note">貯金に含むご祝儀 '+yen(v.included)+' は二重に足していません</div>':'')
   +'<div class="funding-need" aria-label="追加で必要な資金">'
   +'<div class="funding-need-result"><span>あと準備する金額</span>'
@@ -503,7 +504,9 @@ function financeUpcoming(){
 }
 
 function renderMoney(){
- let h=header('お金',btn('＋ 追加','money-add','','primary'));
+ let h=header('お金',moneyView==='gifts'
+  ?btn('＋ ご祝儀','new-gift','','money-add-subtle')
+  :btn('＋ 登録','money-add','','money-add-subtle'));
  h+='<div class="tabs money-tabs">'+[['overview','資金'],['accounts','貯金'],['honeymoon','旅費'],['extras','必要品'],['categories','費用'],['payments','支払い'],['gifts','ご祝儀']].map(v=>'<button class="tab '+(moneyView===v[0]?'active':'')+'" data-action="money-view" data-id="'+v[0]+'">'+v[1]+'</button>').join('')+'</div>';
  const budget=n(state.budgetTotal),travel=honeymoonQuote(),ceremonyCost=state.categories.filter(c=>c.id!==honeymoonCategory()?.id).reduce((sum,c)=>sum+(forecastCat(c)||n(c.budget)),0),cost=ceremonyCost+travel,paid=totalPaid(),gifts=totalGifts();
  if(moneyView==='overview'){
@@ -536,9 +539,9 @@ function renderMoney(){
  }
  if(moneyView==='gifts'){
   const funding=combinedFunding();
-  h+='<div class="card"><div class="small muted">ご祝儀・支援金</div><div class="amount">'+yen(gifts)+'</div>'
-    +'<div class="small muted">貯金に含む '+yen(funding.included)+' ／ 新たに加算 '+yen(funding.additional)+'</div></div>';
-  h+='<div class="page-actions mb">'+btn('＋ ご祝儀を登録','new-gift','','primary')+'</div>';
+  h+='<div class="card gift-balance"><div class="row between gift-balance-title"><span class="small muted">ご祝儀・支援金</span>'+btn('＋ 追加','new-gift','','gift-add-link')+'</div>'
+    +'<div class="amount">'+yen(gifts)+'</div>'
+    +'<div class="small muted">うち貯金に含む '+yen(funding.included)+'</div></div>';
   const guestGifts=state.guests.filter(x=>n(x.gift)>0);if(guestGifts.length)h+='<div class="card"><b>ゲスト別に登録したご祝儀</b><div class="small muted">'+guestGifts.map(g=>e(g.name)+' '+yen(g.gift)).join(' · ')+'</div></div>';
   h+=state.gifts.length?'<div class="list">'+state.gifts.map(g=>'<div class="item"><div class="content"><b>'+e(g.source)+'</b><div class="item-sub">'+e(g.note||'')+'</div></div><b>'+yen(g.amount)+'</b>'+btn('編集','edit-gift',g.id)+'</div>').join('')+'</div>':empty('ご祝儀や親御さんからの支援を登録できます。');
   h+='<p class="caption">ゲスト詳細とこちらで同じご祝儀を二重登録しないでください。貯金残高に含めた場合は編集からチェックを入れてください。</p>';
@@ -710,7 +713,7 @@ function verifyEditorPage(index){
 function initializeModalPager(){
  editorPages=null;
  const form=dialog.querySelector('form[data-form]');
- if(!form||form.classList.contains('guest-editor')||['saving','honeymoon','category','budget-total'].includes(form.dataset.form))return;
+ if(!form||form.classList.contains('guest-editor')||['saving','honeymoon','category','budget-total','gift'].includes(form.dataset.form))return;
  const actions=form.querySelector('.form-actions');
  if(!actions)return;
  const fields=Array.from(form.children).filter(x=>x!==actions);
@@ -774,7 +777,11 @@ function modalEdit(type,uid=''){
  }else if(type==='payment'){
   title=uid?'支払いを編集':'支払い予定を追加';b=field('支払い内容','title','text',x.title,true)+choices('項目','category',state.categories.map(c=>[c.id,c.name]),x.category)+field('金額（円）','amount','number',x.amount||0,false,'min="0"')+field('支払期限','due','date',x.due||'')+selectField('payer','支払い担当',state.roles,x.payer||state.myRole)+checkField('支払い完了','paid',x.paid);
  }else if(type==='gift'){
-  title=uid?'ご祝儀を編集':'ご祝儀・支援金を追加';b=field('誰から・項目名','source','text',x.source,true)+field('金額（円）','amount','number',x.amount||0,false,'min="0"')+checkField('この金額は貯金残高に含まれる','inSavings',x.inSavings)+area('メモ','note',x.note||'');
+  title=uid?'ご祝儀を編集':'ご祝儀を追加';
+   b=field('誰から','source','text',x.source||'',true,'placeholder="例：祖父母／両親"')
+    +field('金額（円）','amount','number',x.amount??'',true,'min="0" inputmode="numeric" placeholder="例：30000"')
+    +checkField('この金額は貯金に含まれている','inSavings',x.inSavings)
+    +'<details class="editor-more" '+(x.note?'open':'')+'><summary>メモ（任意）</summary><div class="editor-more-inner">'+area('メモ','note',x.note||'')+'</div></details>';
  }else if(type==='guest'){
   title=uid?'ゲストを編集':'ゲストを追加';
   b='<div class="guest-steps" role="tablist" aria-label="ゲストの入力項目">'+[['basic','基本'],['care','出欠・配慮'],['details','費用・メモ']].map((part,i)=>'<button type="button" role="tab" aria-selected="'+(i===0)+'" class="guest-step-tab '+(i===0?'active':'')+'" data-action="guest-step" data-id="'+part[0]+'">'+(i+1)+' · '+part[1]+'</button>').join('')+'</div>'
@@ -1019,15 +1026,15 @@ async function handleAction(target){
  if(action==='guest-view'){guestView=uid;render();return}
  if(action==='template'){templateTasks();return}
  if(action==='calendar-export'){exportWeddingCalendar();return}
- if(action==='money-add'){modal('金額を入力','<p class="simple-editor-intro">まずはこの3つから。</p><div class="stack">'
- +btn('結婚式の総額','budget-total','','light')
- +btn('新婚旅行費','edit-honeymoon','','light')
- +btn('貯金を追加','new-saving','','light')
- +'<details class="editor-more"><summary>その他の登録</summary><div class="editor-more-inner stack">'
- +btn('ご祝儀・支援金','new-gift','','light')
- +btn('支払い予定','new-payment','','light')
- +btn('必要なもの','new-extra','','light')
- +btn('費用の内訳','new-category','','light')
+ if(action==='money-add'){modal('金額を登録','<div class="money-add-menu">'
+ +btn('結婚式の総額','budget-total','','money-menu-item')
+ +btn('新婚旅行費','edit-honeymoon','','money-menu-item')
+ +btn('貯金','new-saving','','money-menu-item')
+ +btn('ご祝儀・支援金','new-gift','','money-menu-item')
+ +'<details class="editor-more"><summary>その他の項目</summary><div class="editor-more-inner stack">'
+ +btn('支払い予定','new-payment','','money-menu-item')
+ +btn('必要なもの','new-extra','','money-menu-item')
+ +btn('費用の内訳','new-category','','money-menu-item')
  +'</div></details></div>');return}
  if(action==='edit-savings'){moneyView='accounts';render();return}
  if(action==='new-saving'){if(dialog.open)closeModal();savingEditor();return}

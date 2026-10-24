@@ -109,7 +109,7 @@ function splitPageable(node,depth=0){
  if(!(node instanceof HTMLElement)||depth>5)return [node];
  const children=Array.from(node.children);
  if(!children.length)return [node];
- const isFlow=node.matches('.list,.idea-grid,.table-grid,.home-preview,.activity-list,.timeline,.stack');
+ const isFlow=node.matches('.list,.idea-grid,.table-grid,.home-preview,.activity-list,.timeline,.stack,.money-dashboard');
  const isGroup=node.matches('.card')&&(
   children.length>2||children.some(x=>x.matches('.list,.timeline,.bar-row,.setting-row,.calendar-grid'))
  );
@@ -200,7 +200,7 @@ function organizeScreen(){
  panel.setAttribute('aria-label',({home:'準備の概要',tasks:'タスク一覧',money:'お金の詳細',guests:'ゲスト管理',presents:'お祝い・お返し',more:'その他の項目'})[tab]);
  const key=getScreenKey();
  // Do not pin finance or progress cards: they must fit inside one paginated frame.
- let pinnedCount=tab==='home'?0:tab==='tasks'?4:tab==='guests'?3:tab==='money'?2:tab==='presents'?2:morePage?0:1;
+ let pinnedCount=tab==='home'?0:tab==='tasks'?4:tab==='guests'?3:tab==='money'?1:tab==='presents'?2:morePage?0:1;
  children.forEach((node,i)=>(i<pinnedCount?pinned:panel).appendChild(node));
  const nav=document.createElement('div');nav.className='page-navigation';
  nav.innerHTML='<button class="page-arrow" data-action="pager-prev" type="button" aria-label="前のページ">‹ 前</button>'
@@ -506,8 +506,8 @@ function financeUpcoming(){
 }
 
 /* One money dashboard, with contextual editors instead of seven nested tabs. */
-function moneyFigure(label,value,action,caption='',active=false){
- return '<button type="button" class="money-figure '+(active?'money-figure-active':'')+'" data-action="'+e(action)+'">'
+function moneyFigure(label,value,action,caption='',uid=''){
+ return '<button type="button" class="money-figure" data-action="'+e(action)+'" data-id="'+e(uid)+'">'
   +'<span class="money-figure-label">'+e(label)+'</span>'
   +'<strong>'+value+'</strong>'
   +'<span class="money-figure-action">'+e(caption||'編集する')+' <span aria-hidden="true">›</span></span></button>';
@@ -573,10 +573,9 @@ function openMoneyDetails(kind){
  modal(title,body);dialog.classList.add('money-detail-dialog');
 }
 function renderMoney(){
- const f=financeSummary(),v=combinedFunding(),insights=budgetInsights();
+ const f=financeSummary(),v=combinedFunding();
  const hasCost=f.weddingPlan>0||f.travelPlan>0||f.extraFuture>0;
- const hasSaving=v.savingsSet||v.total>0;
- const remaining=f.shortfall;
+  const remaining=f.shortfall;
  const covered=hasCost&&remaining===0;
  const amountText=hasCost?yen(covered?f.surplus:remaining):'<span class="money-dash">—</span>';
  const paid=f.weddingPlan+f.travelPlan+state.extras.reduce((sum,x)=>sum+Math.max(0,n(x.amount)),0)-f.required;
@@ -599,8 +598,8 @@ function renderMoney(){
   +'</section>'
   +'<section class="money-section"><div class="money-section-heading"><b>用意できているお金</b><span>'+yen(v.total)+'</span></div>'
   +'<div class="money-figure-grid">'
-  +moneyFigure('貯金',v.savingsSet?yen(v.savingsTotal):'<i>―</i>','money-detail','明細を見る')
-  +moneyFigure('ご祝儀・支援',yen(v.giftTotal+v.guestTotal),'money-detail','明細を見る')
+  +moneyFigure('貯金',v.savingsSet?yen(v.savingsTotal):'<i>―</i>','money-detail','明細を見る','accounts')
+  +moneyFigure('ご祝儀・支援',yen(v.giftTotal+v.guestTotal),'money-detail','明細を見る','gifts')
   +'</div>'
   +(v.included?'<div class="money-section-foot">ご祝儀のうち '+yen(v.included)+' は貯金に含まれます</div>':'')
   +'</section>'

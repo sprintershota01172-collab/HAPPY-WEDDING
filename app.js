@@ -710,7 +710,7 @@ function verifyEditorPage(index){
 function initializeModalPager(){
  editorPages=null;
  const form=dialog.querySelector('form[data-form]');
- if(!form||form.classList.contains('guest-editor'))return;
+ if(!form||form.classList.contains('guest-editor')||['saving','honeymoon','category','budget-total'].includes(form.dataset.form))return;
  const actions=form.querySelector('.form-actions');
  if(!actions)return;
  const fields=Array.from(form.children).filter(x=>x!==actions);
@@ -764,7 +764,13 @@ function modalEdit(type,uid=''){
   title=uid?'タスクを編集':'新しいタスク';
   b=field('タスク名','title','text',x.title,true)+selectField('role','担当者',state.roles,x.role||state.myRole)+field('期限','due','date',x.due||'')+choices('優先度','priority',[['high','高い'],['normal','普通'],['low','低い']],x.priority||'normal')+area('メモ','memo',x.memo||'')+field('参考URL','url','url',x.url||'')+area('サブタスク（1行に1件）','subtasks',(x.subtasks||[]).map(s=>(s.done?'[x] ':'')+s.title).join('\n'))+'<div class="field"><label>写真添付（容量を抑えて保存）</label><input type="file" name="photo" accept="image/*"></div>'+(x.photo?'<div class="attachments"><img src="'+e(x.photo)+'" alt="添付写真">'+checkField('写真を削除','removePhoto',false)+'</div>':'');
  }else if(type==='category'){
-  title=uid?'予算項目を編集':'予算項目を追加';b=field('項目名','name','text',x.name,true)+field('アイコン','icon','text',x.icon||'♡')+field('項目別予算（円）','budget','number',x.budget||0,false,'min="0"')+field('見積（円）','estimate','number',x.estimate||0,false,'min="0"')+field('契約額（円）','contract','number',x.contract||0,false,'min="0"')+field('予定表に登録していない支払済額（円）','manualPaid','number',x.manualPaid||0,false,'min="0"')+'<p class="field-hint">支払い予定で完了にした金額は自動加算されます。二重計上しないようご注意ください。</p>';
+  title=uid?'費用を編集':'費用を追加';b=field('項目名','name','text',x.name,true)+field('見積金額（円）','estimate','number',x.estimate||0,false,'min="0"')
+   +'<details class="editor-more"><summary>契約額・予算など（任意）</summary><div class="editor-more-inner">'
+   +field('契約額（円）','contract','number',x.contract||0,false,'min="0"')
+   +field('項目別予算（円）','budget','number',x.budget||0,false,'min="0"')
+   +field('登録外の支払済額（円）','manualPaid','number',x.manualPaid||0,false,'min="0"')
+   +field('アイコン','icon','text',x.icon||'♡')
+   +'<p class="field-hint">支払い済み金額の二重入力に注意してください。</p></div></details>';
  }else if(type==='payment'){
   title=uid?'支払いを編集':'支払い予定を追加';b=field('支払い内容','title','text',x.title,true)+choices('項目','category',state.categories.map(c=>[c.id,c.name]),x.category)+field('金額（円）','amount','number',x.amount||0,false,'min="0"')+field('支払期限','due','date',x.due||'')+selectField('payer','支払い担当',state.roles,x.payer||state.myRole)+checkField('支払い完了','paid',x.paid);
  }else if(type==='gift'){
@@ -1013,17 +1019,32 @@ async function handleAction(target){
  if(action==='guest-view'){guestView=uid;render();return}
  if(action==='template'){templateTasks();return}
  if(action==='calendar-export'){exportWeddingCalendar();return}
- if(action==='money-add'){modal('何を追加する？','<div class="stack">'+btn('貯金・口座を追加','new-saving','','light')+btn('新婚旅行費を入力','edit-honeymoon','','light')+btn('必要なものを追加','new-extra','','light')+btn('予算項目を追加','new-category','','light')+btn('支払い予定を追加','new-payment','','light')+btn('ご祝儀を追加','new-gift','','light')+'</div>');return}
+ if(action==='money-add'){modal('金額を入力','<p class="simple-editor-intro">まずはこの3つから。</p><div class="stack">'
+ +btn('結婚式の総額','budget-total','','light')
+ +btn('新婚旅行費','edit-honeymoon','','light')
+ +btn('貯金を追加','new-saving','','light')
+ +'<details class="editor-more"><summary>その他の登録</summary><div class="editor-more-inner stack">'
+ +btn('ご祝儀・支援金','new-gift','','light')
+ +btn('支払い予定','new-payment','','light')
+ +btn('必要なもの','new-extra','','light')
+ +btn('費用の内訳','new-category','','light')
+ +'</div></details></div>');return}
  if(action==='edit-savings'){moneyView='accounts';render();return}
  if(action==='new-saving'){if(dialog.open)closeModal();savingEditor();return}
  if(action==='edit-saving'){if(dialog.open)closeModal();savingEditor(uid);return}
- if(action==='edit-honeymoon'){const c=honeymoonCategory();modal('新婚旅行費の登録・更新',field('旅行の予定総額（円）','honeymoonTotal','number',c?(forecastCat(c)||n(c.budget)):0,true,'min="0" inputmode="numeric"')+field('支払済み（円）','honeymoonPaid','number',c?.manualPaid||0,false,'min="0" inputmode="numeric"')+field('旅行予算（円）','honeymoonBudget','number',c?.budget||0,false,'min="0" inputmode="numeric"')+'<p class="field-hint">支払いタブで完了登録した旅行費は別途加算されます。二重入力にご注意ください。</p>','honeymoon');return}
- if(action==='budget-total'){modal('全体予算',field('予算総額（円）','budget','number',state.budgetTotal,true,'min="0"'),'budget-total');return}
+ if(action==='edit-honeymoon'){if(dialog.open)closeModal();const c=honeymoonCategory();modal('新婚旅行費',
+ '<p class="simple-editor-intro">旅行2人分の合計額を入力してください。</p>'
+ +field('旅行の総額（円）','honeymoonTotal','number',c?(forecastCat(c)||n(c.budget)):0,true,'min="0" inputmode="numeric"')
+ +'<details class="editor-more"><summary>支払い済み・予算（任意）</summary><div class="editor-more-inner">'
+ +field('支払済み（円）','honeymoonPaid','number',c?.manualPaid||0,false,'min="0" inputmode="numeric"')
+ +field('旅行予算（円）','honeymoonBudget','number',c?.budget||0,false,'min="0" inputmode="numeric"')
+ +'<p class="field-hint">支払いタブで登録済みの金額は重複入力しないでください。</p></div></details>','honeymoon');return}
+ if(action==='budget-total'){if(dialog.open)closeModal();modal('結婚式の総額','<p class="simple-editor-intro">会場の見積総額を入力してください。</p>'+field('結婚式の見積総額（円）','budget','number',state.budgetTotal,true,'min="0" inputmode="numeric"'),'budget-total');return}
  if(action==='comment'){modal('ふたりのひとこと',area('メッセージ','text'),'comment');return}
  if(action==='toggle-task'){const x=state.tasks.find(t=>t.id===uid);if(x){write('tasks',{...x,done:!x.done});if(!x.done){completion();toast('おつかれさま！ひとつ完了 ✿')}}return}
  if(action==='toggle-subtask'){const x=state.tasks.find(t=>t.id===uid);if(x){const subId=target.dataset.subid;write('tasks',{...x,subtasks:(x.subtasks||[]).map(a=>a.id===subId?{...a,done:!a.done}:a)})}return}
  if(['toggle-payment','toggle-item','toggle-thanks','toggle-schedule','toggle-extra'].includes(action)){const c={'toggle-payment':'payments','toggle-item':'items','toggle-thanks':'thanks','toggle-schedule':'schedules','toggle-extra':'extras'}[action],x=state[c].find(t=>t.id===uid);if(x){if(action==='toggle-payment'||action==='toggle-extra')write(c,{...x,paid:!x.paid});else{write(c,{...x,done:!x.done});if(!x.done)completion()}}return}
- if(action.startsWith('new-')||action.startsWith('edit-')){modalEdit(action.split('-')[1],action.startsWith('edit-')?uid:'');return}
+ if(action.startsWith('new-')||action.startsWith('edit-')){if(dialog.open)closeModal();modalEdit(action.split('-')[1],action.startsWith('edit-')?uid:'');return}
  if(action==='delete'){
   const c={saving:'savingsAccounts',task:'tasks',category:'categories',payment:'payments',gift:'gifts',guest:'guests',table:'tables',role:'roles',timeline:'timeline',vendor:'vendors',idea:'ideas',item:'items',thanks:'thanks',schedule:'schedules',extra:'extras',present:'presents'}[target.dataset.type];
   if(!c)return;

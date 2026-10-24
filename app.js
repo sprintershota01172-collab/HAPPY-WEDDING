@@ -284,18 +284,21 @@ function savingsAccountPage(){
 function savingEditor(uid=''){
  const x=savingRecords().find(x=>x.id===uid)||{};
  const suggestions=(name,values)=>'<datalist id="'+name+'">'+values.map(x=>'<option value="'+e(x)+'"></option>').join('')+'</datalist>';
- const fields='<div class="field"><label for="saving-owner">名義</label>'
+ const fields='<p class="simple-editor-intro">金額・持ち主・銀行だけで登録できます。</p>'
+  +field('貯金額（円）','amount','number',x.amount??'',true,'min="0" inputmode="numeric" placeholder="例：1000000"')
+  +'<div class="field"><label for="saving-owner">誰の貯金？</label>'
   +'<input id="saving-owner" name="owner" list="saving-owner-list" value="'+e(x.owner==='未分類'?'':x.owner||'')+'" placeholder="例：新郎／新婦／共同" required autocomplete="off">'
   +suggestions('saving-owner-list',['新郎','新婦','共同','親・家族'])+'</div>'
+  +field('どこの貯金？','bank','text',x.bank==='口座未設定'?'':x.bank||'',true,'autocomplete="off" placeholder="例：楽天銀行／現金"')
+  +'<details class="editor-more"><summary>用途・口座名など（任意）</summary><div class="editor-more-inner">'
   +'<div class="field"><label for="saving-purpose">用途</label>'
-  +'<input id="saving-purpose" name="purpose" list="saving-purpose-list" value="'+e(x.purpose==='用途未設定'?'':x.purpose||'')+'" placeholder="例：結婚式／新婚旅行" required autocomplete="off">'
+  +'<input id="saving-purpose" name="purpose" list="saving-purpose-list" value="'+e(x.purpose==='用途未設定'?'':x.purpose||'')+'" placeholder="結婚式・新婚旅行" autocomplete="off">'
   +suggestions('saving-purpose-list',['結婚式','新婚旅行','結婚式・新婚旅行','共有貯金','生活費','生活防衛資金','その他'])+'</div>'
-  +field('金融機関','bank','text',x.bank==='口座未設定'?'':x.bank||'',true,'autocomplete="off" placeholder="例：楽天銀行、現金"')
-  +field('口座名','account','text',x.account||'',false,'autocomplete="off" placeholder="例：普通預金・共同口座"')
-  +field('残高（円）','amount','number',x.amount??'',true,'min="0" inputmode="numeric"')
-  +checkField('結婚式・旅行に使用する','available',x.available!==false)
-  +'<p class="field-hint">口座番号・暗証番号は入力しないでください。更新すると貯金合計も再計算します。</p>';
- modal(uid?'貯金の編集':'貯金の追加',fields,'saving',uid);
+  +field('口座の呼び名','account','text',x.account||'',false,'autocomplete="off" placeholder="例：普通預金"')
+  +checkField('結婚資金に使う','available',x.available!==false)
+  +'<p class="field-hint">口座番号や暗証番号は入力しないでください。</p>'
+  +'</div></details>';
+ modal(uid?'貯金を編集':'貯金を追加',fields,'saving',uid);
 }
 
 
@@ -854,8 +857,8 @@ async function submit(form){
  }
  if(type==='comment'){const txt=(v.text||'').trim();if(!txt)return;write('comments',{id:id(),author:nameRole(state.myRole),text:txt,at:Date.now()});closeModal();toast('ひとことを残しました');return}
  if(type==='saving'){
-  if(!v.owner?.trim()||!v.purpose?.trim()||!v.bank?.trim()||v.amount===''||!Number.isFinite(Number(v.amount))||Number(v.amount)<0){
-   toast('持ち主・用途・金融機関・残高を正しく入力してください');return
+  if(!v.owner?.trim()||!v.bank?.trim()||v.amount===''||!Number.isFinite(Number(v.amount))||Number(v.amount)<0){
+   toast('金額・持ち主・銀行を入力してください');return
   }
   if(!state.savingsLedgerInitialized){
    const legacy=savingRecords().find(x=>x.legacy);
@@ -866,7 +869,7 @@ async function submit(form){
    }
   }
   const before=state.savingsAccounts.find(x=>x.id===uid)||{};
-  const row={...before,id:uid||id(),owner:v.owner.trim(),purpose:v.purpose.trim(),bank:v.bank.trim(),
+  const row={...before,id:uid||id(),owner:v.owner.trim(),purpose:(v.purpose||'').trim()||'結婚式・新婚旅行',bank:v.bank.trim(),
    account:(v.account||'').trim(),amount:Math.max(0,n(v.amount)),available:flBool(f,'available')};
   delete row.legacy;
   write('savingsAccounts',row);closeModal();

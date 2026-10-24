@@ -243,7 +243,7 @@ function honeymoonPanel(){
  return '<div class="honeymoon-panel"><div class="honeymoon-label"><span>HONEYMOON BUDGET</span>'+btn('旅費を更新','edit-honeymoon','','light tiny')+'</div>'
   +'<div class="honeymoon-cost"><span>新婚旅行の予定総額</span><button type="button" class="finance-amount-edit honeymoon-amount" data-action="edit-honeymoon" aria-label="新婚旅行費を登録・更新"><strong>'+(c?yen(planned):'—')+'</strong><small aria-hidden="true">✎</small></button></div>'
   +'<div class="honeymoon-grid"><div><span>支払済み</span><strong>'+yen(paid)+'</strong></div><div><span>残りの支払い</span><strong>'+(c?yen(remaining):'—')+'</strong></div></div>'
-  +'<p class="caption">新婚旅行費は結婚式の予算とは分け、必要資金の計算には含めます。支払いタブとの二重計上にご注意ください。</p></div>';
+  +'<p class="caption">旅行費は式とは別に計算します。</p></div>';
 }
 
 
@@ -264,7 +264,7 @@ function savingsTotals(){
 }
 function savingsRows(){
  const entries=savingRecords();
- if(!entries.length)return empty('貯金の持ち主・銀行・用途を登録すると一覧表示されます。');
+ if(!entries.length)return empty('貯金を追加するとここに表示されます。');
  return '<div class="list savings-list">'+entries.map(x=>
   '<div class="item saving-row"><div class="content"><b class="item-title">'+e(x.owner||'持ち主未設定')+'</b>'
   +'<span class="saving-purpose">'+e(x.purpose||'用途未設定')+'</span>'
@@ -342,11 +342,11 @@ function fundingBreakdownCard(){
   +'<button type="button" class="budget-fund-source" data-action="money-view" data-id="gifts"><span>ご祝儀・支援</span><b>'+yen(v.giftTotal+v.guestTotal)+'</b></button></div>'
   +(v.included?'<div class="budget-funds-note">貯金に含むご祝儀 '+yen(v.included)+' は二重に足していません</div>':'')
   +'<div class="funding-need" aria-label="追加で必要な資金">'
-  +'<div class="funding-need-result"><span>これから必要な金額</span>'
+  +'<div class="funding-need-result"><span>あと準備する金額</span>'
   +'<strong class="'+(ready?'':'funding-pending')+'">'+(ready?yen(f.shortfall):missing)+'</strong>'
   +'<small>'+(ready?(f.shortfall>0?'今後の支払いに対する不足分':'必要額を確保できています'):'式・旅費・貯金を入力すると表示します')+'</small></div></div>'
   +(remaining.length?'<div class="funding-start"><div class="funding-start-head"><b>まず入力する金額</b><small>'+(3-remaining.length)+'/3 完了</small></div>'
-   +'<div class="funding-start-actions">'+remaining.map(x=>'<button type="button" data-action="'+x.action+'"><span>'+x.name+'</span><span aria-hidden="true">＋</span></button>').join('')+'</div></div>':'')
+   +'<div class="funding-start-actions" style="--guide-cols:'+remaining.length+'">'+remaining.map(x=>'<button type="button" data-action="'+x.action+'"><span>'+x.name+'</span><span aria-hidden="true">＋</span></button>').join('')+'</div></div>':'')
   +'</div>';
 }
 
@@ -498,7 +498,7 @@ function financeUpcoming(){
  return '<section class="budget-upcoming"><div class="budget-section-title"><b>今後の予定</b>'+btn('一覧','more','appointments','ghost tiny')+'</div>'
  +'<div class="budget-upcoming-rows">'+(rows.length?rows.map(x=>'<button class="budget-upcoming-row" type="button" data-action="'+x.act+'" data-id="'+e(x.id)+'">'
   +'<time>'+e(x.date.slice(5).replace('-','/'))+(x.time?' '+e(x.time):'')+'</time><span><b>'+e(x.title)+'</b><small>'+e(x.type)+(x.date<now?' · 期限超過':'')+'</small></span><i aria-hidden="true">›</i></button>').join('')
-  :'<p class="caption">予定は未登録です。右上の追加から登録できます。</p>')+'</div>'
+  :'<p class="caption">予定が入るとここに表示されます。</p>')+'</div>'
  +'</section>';
 }
 
@@ -599,8 +599,8 @@ function renderPresents(){
  }else{
   h+='<div class="compact-summary">登録 <b>'+all.length+'件</b><span>お返し済 <b>'+returned+'件</b></span><span>未対応 <b>'+(all.length-returned)+'件</b></span></div>';
   h+='<div class="list compact-list">'+(all.length?all.map(x=>
-   '<div class="item"><div class="content"><b class="item-title">'+e(x.sender)+'</b><div class="item-sub">'+e(x.kind||'品物')+' · '+e(x.received||'内容未登録')+(n(x.value)?' · '+yen(x.value):'')+'</div>'
-   +'<div class="item-sub">'+(x.returned?'お返し済':'お返し未完了')+'：'+e(x.returnItem||'未登録')+(n(x.returnValue)?' · '+yen(x.returnValue):'')+'</div></div>'
+   '<div class="item"><div class="content"><b class="item-title">'+e(x.sender)+'</b><div class="item-sub">'+e(x.kind||'品物')+' · '+e(x.received||'—')+(n(x.value)?' · '+yen(x.value):'')+'</div>'
+   +'<div class="item-sub">'+(x.returned?'お返し済':'お返し未完了')+'：'+e(x.returnItem||'—')+(n(x.returnValue)?' · '+yen(x.returnValue):'')+'</div></div>'
    +btn('編集','edit-present',x.id)+'</div>').join(''):empty('品物・商品券・現金などのお祝いとお返しを記録できます。'))+'</div>';
   h+='<p class="caption">お祝い台帳は、ご祝儀の収入に重複加算しません。</p>';
  }

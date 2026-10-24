@@ -446,11 +446,11 @@ function budgetInsights(){
  const ceremonyCost=parts.reduce((v,c)=>v+c.value,0);
  const allExpected=state.categories.reduce((v,c)=>v+estimate(c),0)+state.extras.reduce((v,x)=>v+Math.max(0,n(x.amount)),0);
  const paymentsPaid=state.categories.reduce((v,c)=>v+Math.max(0,paidCategory(c)),0)+state.extras.filter(x=>x.paid).reduce((v,x)=>v+Math.max(0,n(x.amount)),0);
- const paymentTotal=Math.max(paymentsPaid,allExpected);
  const target=Math.max(0,n(state.budgetTotal)),funds=financeSummary();
+ const paymentTotal=Math.max(paymentsPaid,allExpected,funds.weddingPlan+funds.travelPlan+funds.extraFuture);
  return {parts,ceremonyCost,target,paymentPaid:paymentsPaid,paymentTotal,
-  fundingRatio:funds.costsSet&&funds.required>0&&funds.savingsSet?funds.savings/funds.required:null,
-  budgetRatio:target?ceremonyCost/target:null,paymentRatio:paymentTotal?paymentsPaid/paymentTotal:null};
+  fundingRatio:funds.weddingPlan>0&&funds.travelPlan>0&&funds.required>0&&funds.savingsSet?funds.savings/funds.required:null,
+  budgetRatio:target&&ceremonyCost>0?ceremonyCost/target:null,paymentRatio:paymentTotal?paymentsPaid/paymentTotal:null};
 }
 function budgetProgressLine(label,ratio,color){
  const ready=ratio!==null&&Number.isFinite(ratio)&&ratio>=0;

@@ -11,8 +11,8 @@ const DEFAULT_ROLES=[
  {id:'host',name:'司会・友人幹事',color:COLORS[4]},{id:'planner',name:'プランナー',color:COLORS[5]}
 ];
 const DEFAULT_CATEGORIES=['会場','衣装','写真・映像','料理','装花','引出物','ペーパーアイテム','演出','二次会','新婚旅行'].map((name,i)=>({id:'c'+i,name,icon:['⌂','♕','▧','♨','✿','🎁','✉','♫','♡','✈'][i],budget:0,estimate:0,contract:0,manualPaid:0,color:COLORS[i%COLORS.length]}));
-const ARRAYS=['roles','categories','tasks','payments','gifts','guests','tables','timeline','vendors','ideas','items','thanks','comments','schedules','extras','presents','savingsAccounts'];
-function defaults(){return {version:1,setup:0,date:'',myRole:'groom',couple:['新郎','新婦'],budgetTotal:0,weddingPaidDirect:0,savings:null,savingsLedgerInitialized:false,reminders:false,reminderDays:3,roles:DEFAULT_ROLES,categories:DEFAULT_CATEGORIES,tasks:[],payments:[],gifts:[],guests:[],tables:[],timeline:[],vendors:[],ideas:[],items:[],thanks:[],comments:[],schedules:[],extras:[],presents:[],savingsAccounts:[]}}
+const ARRAYS=['roles','categories','tasks','payments','gifts','guests','tables','timeline','vendors','ideas','items','thanks','comments','schedules','extras','presents','savingsAccounts','plannedIncome'];
+function defaults(){return {version:1,setup:0,date:'',myRole:'groom',couple:['新郎','新婦'],budgetTotal:0,weddingPaidDirect:0,savings:null,savingsLedgerInitialized:false,reminders:false,reminderDays:3,roles:DEFAULT_ROLES,categories:DEFAULT_CATEGORIES,tasks:[],payments:[],gifts:[],guests:[],tables:[],timeline:[],vendors:[],ideas:[],items:[],thanks:[],comments:[],schedules:[],extras:[],presents:[],savingsAccounts:[],plannedIncome:[]}}
 function load(){try{const v=JSON.parse(localStorage.getItem(KEY)||'null');if(!v)return defaults();const d=defaults();return {...d,...v,...Object.fromEntries(ARRAYS.map(k=>[k,Array.isArray(v[k])?v[k]:d[k]]))}}catch(e){return defaults()}}
 let state=load(), tab='home', taskRole='all', guestView='list', moneyView='overview', paymentMonth='',paymentDateSelected='', morePage='',presentView='received',selectedGuest='', cloud=null;
 const app=document.getElementById('main'),dialog=document.getElementById('modal'),modalContent=document.getElementById('modal-content'),toastEl=document.getElementById('toast');
@@ -233,7 +233,7 @@ function updateSetupDays(){
  if(previous&&Number(previous)<=maxDay)el.value=previous;
 }
 
-function renderSetup(){const step=state.setup===1?2:1;return '<div class="setup"><div class="setup-flower">✿ ♡ ✿</div><h1>Happy Wedding</h1><p>ふたりの特別な一日まで。<br>準備も一緒に楽しもう。</p><div class="card">'+(step===1?'<div class="eyebrow">STEP 1 / 2</div><h2>挙式日はいつ？</h2><form data-form="setup1" novalidate>'+renderSetupDate()+'<button class="btn primary btn-wide">次へ →</button></form>':'<div class="eyebrow">STEP 2 / 2</div><h2>あなたの役割は？</h2><form data-form="setup2">'+selectField('role','あなたの役割',state.roles,state.myRole)+'<button class="btn primary btn-wide">はじめる ♡</button></form>')+'</div><p>あとから設定を変更できます。<br>データは自動でこの端末に保存されます。</p></div>'}
+function renderSetup(){const step=state.setup===1?2:1;return '<div class="setup"><div class="setup-flower">✿ ♡ ✿</div><h1>Sakura Vow</h1><p>ふたりの特別な一日まで。<br>準備も一緒に楽しもう。</p><div class="card">'+(step===1?'<div class="eyebrow">STEP 1 / 2</div><h2>挙式日はいつ？</h2><form data-form="setup1" novalidate>'+renderSetupDate()+'<button class="btn primary btn-wide">次へ →</button></form>':'<div class="eyebrow">STEP 2 / 2</div><h2>あなたの役割は？</h2><form data-form="setup2">'+selectField('role','あなたの役割',state.roles,state.myRole)+'<button class="btn primary btn-wide">はじめる ♡</button></form>')+'</div><p>あとから設定を変更できます。<br>データは自動でこの端末に保存されます。</p></div>'}
 
 
 function honeymoonCategory(){return state.categories.find(c=>c.name==='新婚旅行'||c.id==='hw-honeymoon')||null}
@@ -327,6 +327,30 @@ function combinedFunding(){
   total:savings.total+gifts.additional,
   usable:savings.usable+gifts.additional,
   hasEntries:savings.registered||gifts.total>0};
+}
+/* Expected money is not on hand and never enters the current balance. */
+function incomeForecast(){
+ const entries=(state.plannedIncome||[]).filter(x=>!x.received);
+ const total=entries.reduce((a,x)=>a+Math.max(0,n(x.amount)),0);
+ return {entries,total,count:entries.length};
+}
+function forecastIncomeEditor(uid=''){
+ const x=state.plannedIncome.find(x=>x.id===uid)||{};
+ modal(uid?'入金予定を編集':'将来の入金を登録',
+ '<p class="saving-editor-intro">入金されるまでは現在の貯金に含めません。</p>'
+ +field('何のお金？','title','text',x.title||'',true,'placeholder="例：冬のボーナス"')
+ +field('予定金額（円）','amount','number',x.amount??'',true,'min="0" inputmode="numeric" placeholder="例：600000"')
+ +field('入金予定日','date','date',x.date||'',true)
+ +'<details class="editor-more"><summary>メモ（任意）</summary><div class="editor-more-inner">'
+ +field('備考','note','text',x.note||'')+'</div></details>','income-forecast',uid);
+}
+function plannedIncomeRows(){
+ const entries=incomeForecast().entries.slice().sort((a,b)=>a.date.localeCompare(b.date));
+ return entries.length?'<div class="forecast-list">'+entries.map(x=>
+ '<div class="forecast-entry"><div class="forecast-entry-left"><b>'+e(x.title)+'</b><small>'
+ +e(x.date.replaceAll('-','/'))+(x.note?' · '+e(x.note):'')+'</small></div>'
+ +'<strong>'+yen(x.amount)+'</strong>'+btn('編集','edit-income-forecast',x.id,'forecast-edit')+'</div>'
+ ).join('')+'</div>':'<p class="money-detail-empty">入金予定はまだありません。</p>';
 }
 function fundingBreakdownCard(){
  const v=combinedFunding(),f=financeSummary(),savings=savingsTotals();
@@ -817,7 +841,7 @@ function verifyEditorPage(index){
 function initializeModalPager(){
  editorPages=null;
  const form=dialog.querySelector('form[data-form]');
- if(!form||form.classList.contains('guest-editor')||['saving','honeymoon','category','budget-total','gift'].includes(form.dataset.form))return;
+ if(!form||form.classList.contains('guest-editor')||['saving','honeymoon','category','budget-total','gift','income-forecast'].includes(form.dataset.form))return;
  const actions=form.querySelector('.form-actions');
  if(!actions)return;
  const fields=Array.from(form.children).filter(x=>x!==actions);
@@ -863,7 +887,7 @@ function closeModal(){
 }
 
 function modalEdit(type,uid=''){
- const plural={saving:'savingsAccounts',task:'tasks',category:'categories',payment:'payments',gift:'gifts',guest:'guests',table:'tables',role:'roles',timeline:'timeline',vendor:'vendors',idea:'ideas',item:'items',thanks:'thanks',schedule:'schedules',extra:'extras',present:'presents'};
+ const plural={'income-forecast':'plannedIncome',saving:'savingsAccounts',task:'tasks',category:'categories',payment:'payments',gift:'gifts',guest:'guests',table:'tables',role:'roles',timeline:'timeline',vendor:'vendors',idea:'ideas',item:'items',thanks:'thanks',schedule:'schedules',extra:'extras',present:'presents'};
  const c=plural[type],x=(type==='saving'?savingRecords():state[c])?.find(v=>v.id===uid)||{};
  let b='',title='';
  if(type==='saving'){savingEditor(uid);return}
@@ -973,7 +997,16 @@ async function submit(form){
   cloud={config:cfg,room,pushPublicKey:(v.pushPublicKey||'').trim()};localStorage.setItem(CLOUD_KEY,JSON.stringify(cloud));toast('設定を保存しました。接続を確認します');render();connect();return;
  }
  if(type==='comment'){const txt=(v.text||'').trim();if(!txt)return;write('comments',{id:id(),author:nameRole(state.myRole),text:txt,at:Date.now()});closeModal();toast('ひとことを残しました');return}
- if(type==='saving'){
+ if(type==='income-forecast'){
+   if(!v.title?.trim()||v.amount===''||!Number.isFinite(Number(v.amount))||Number(v.amount)<=0||!/^\\d{4}-\\d{2}-\\d{2}$/.test(v.date||'')){
+    toast('内容・金額・入金日を入力してください');return;
+   }
+   const old=state.plannedIncome.find(x=>x.id===uid)||{};
+   const record={...old,id:uid||id(),title:v.title.trim(),amount:Math.max(0,n(v.amount)),date:v.date,note:(v.note||'').trim()};
+   pageByKey.delete('money|overview');closeModal();write('plannedIncome',record);
+   toast(uid?'入金予定を更新しました':'入金予定を登録しました');return;
+  }
+  if(type==='saving'){
   if(!v.owner?.trim()||!v.bank?.trim()||v.amount===''||!Number.isFinite(Number(v.amount))||Number(v.amount)<0){
    toast('金額・持ち主・銀行を入力してください');return
   }
@@ -1116,7 +1149,7 @@ function remind(){
  const msg=unseen.length===1?unseen[0].kind+'「'+unseen[0].title+'」の期限を確認してください。':unseen.length+'件の予定・タスク・支払いなどを確認してください。';
  toast(msg);
  if('Notification' in window&&Notification.permission==='granted'&&!document.hidden){
-  try{new Notification('Happy Wedding リマインド',{body:msg,icon:'./icon.svg'})}catch{}
+  try{new Notification('Sakura Vow リマインド',{body:msg,icon:'./icon.svg'})}catch{}
  }
 }
 
@@ -1160,8 +1193,11 @@ async function handleAction(target){
  +btn('支払い予定','new-payment','','money-menu-item')
  +btn('必要なもの','new-extra','','money-menu-item')
  +btn('費用の内訳','new-category','','money-menu-item')
+ +btn('将来の入金予定','new-income-forecast','','money-menu-item')
  +'</div></details></div>');return}
  if(action==='edit-savings'){openMoneyDetails('accounts');return}
+ if(action==='new-income-forecast'){if(dialog.open)closeModal();forecastIncomeEditor();return}
+ if(action==='edit-income-forecast'){if(dialog.open)closeModal();forecastIncomeEditor(uid);return}
  if(action==='new-saving'){if(dialog.open)closeModal();savingEditor('',uid||'');return}
  if(action==='edit-saving'){if(dialog.open)closeModal();savingEditor(uid);return}
  if(action==='edit-honeymoon'){if(dialog.open)closeModal();const c=honeymoonCategory();modal('新婚旅行費',
@@ -1188,7 +1224,7 @@ async function handleAction(target){
  if(['toggle-payment','toggle-item','toggle-thanks','toggle-schedule','toggle-extra'].includes(action)){const c={'toggle-payment':'payments','toggle-item':'items','toggle-thanks':'thanks','toggle-schedule':'schedules','toggle-extra':'extras'}[action],x=state[c].find(t=>t.id===uid);if(x){if(action==='toggle-payment'||action==='toggle-extra')write(c,{...x,paid:!x.paid});else{write(c,{...x,done:!x.done});if(!x.done)completion()}}return}
  if(action.startsWith('new-')||action.startsWith('edit-')){if(dialog.open)closeModal();modalEdit(action.split('-')[1],action.startsWith('edit-')?uid:'');return}
  if(action==='delete'){
-  const c={saving:'savingsAccounts',task:'tasks',category:'categories',payment:'payments',gift:'gifts',guest:'guests',table:'tables',role:'roles',timeline:'timeline',vendor:'vendors',idea:'ideas',item:'items',thanks:'thanks',schedule:'schedules',extra:'extras',present:'presents'}[target.dataset.type];
+  const c={'income-forecast':'plannedIncome',saving:'savingsAccounts',task:'tasks',category:'categories',payment:'payments',gift:'gifts',guest:'guests',table:'tables',role:'roles',timeline:'timeline',vendor:'vendors',idea:'ideas',item:'items',thanks:'thanks',schedule:'schedules',extra:'extras',present:'presents'}[target.dataset.type];
   if(!c)return;
   if(c==='roles'&&state.roles.length<=1){toast('役割を最低1つ残してください');return}
   if(!window.confirm('削除しますか？ 元に戻せません。'))return;

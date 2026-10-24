@@ -580,12 +580,19 @@ function renderMoney(){
  const ratio=f.required>0?Math.max(0,Math.min(100,Math.round(available/f.required*100))):(known?100:0);
  const gifts=v.giftTotal+v.guestTotal;
  const missing=(!f.weddingPlan?'結婚式 ':'')+(!f.travelPlan?'新婚旅行':'');
+ const glyphs={
+  wedding:'<circle cx="9" cy="12" r="5"/><circle cx="15" cy="12" r="5"/>',
+  travel:'<path d="M21 3 3 11l7 2 2 7L21 3Z"/><path d="m10 13 5-5"/>',
+  saving:'<rect x="3" y="6" width="18" height="14" rx="2"/><path d="M3 10h18M16 15h2"/>',
+  gift:'<rect x="3" y="9" width="18" height="12" rx="2"/><path d="M3 13h18M12 9v12M12 9H8.5C4 9 4.5 3 8 3c2.5 0 4 4.5 4 6Zm0 0h3.5c4.5 0 4-6 .5-6C13.5 3 12 7.5 12 9Z"/>'
+ };
  const editable=(label,value,action,arg,iconName)=>{
+  const icon='<svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">'+glyphs[iconName]+'</svg>';
   return '<button type="button" class="money-tile" data-action="'+action+'" '+(arg?'data-id="'+arg+'"':'')+'>'
-    +'<div class="money-tile-top"><span class="money-tile-icon" aria-hidden="true">'+iconName+'</span><span class="money-tile-name">'+label+'</span><span class="money-tile-arrow" aria-hidden="true">↗</span></div>'
+    +'<div class="money-tile-top"><span class="money-tile-icon" aria-hidden="true">'+icon+'</span><span class="money-tile-name">'+label+'</span><span class="money-tile-arrow" aria-hidden="true">↗</span></div>'
     +'<strong>'+ (value===null?'<span class="money-blank">―</span>':yen(value))+'</strong></button>';
  };
- let h=header('お金',btn('＋','money-add','','money-add-subtle'));
+ let h=header('お金','<button type="button" class="btn money-add-subtle" data-action="money-add" aria-label="金額を登録">＋</button>');
  h+='<div class="money-dashboard">'
   +'<section class="money-status" aria-label="資金状況">'
   +'<div class="money-status-label">'+(enough?'残るお金':'あと必要なお金')+'</div>'
@@ -598,19 +605,19 @@ function renderMoney(){
   +'</section>'
   +'<div class="money-group-heading"><b>支出</b><span>金額をタップして編集</span></div>'
   +'<section class="money-tile-grid" aria-label="支出">'
-  +editable('結婚式',f.weddingPlan||null,'budget-total','','♡')
-  +editable('新婚旅行',f.travelPlan||null,'edit-honeymoon','','✈')
+  +editable('結婚式',f.weddingPlan||null,'budget-total','','wedding')
+  +editable('新婚旅行',f.travelPlan||null,'edit-honeymoon','','travel')
   +'</section>'
   +'<div class="money-group-heading"><b>資金</b><span>合計 '+yen(v.total)+'</span></div>'
   +'<section class="money-tile-grid" aria-label="資金">'
-  +editable('貯金',v.savingsSet?v.savingsTotal:null,'money-detail','accounts','◈')
-  +editable('ご祝儀・支援',gifts,'money-detail','gifts','✧')
+  +editable('貯金',v.savingsSet?v.savingsTotal:null,'money-detail','accounts','saving')
+  +editable('ご祝儀・支援',gifts,'money-detail','gifts','gift')
   +'</section>'
   +'<section class="money-actions" aria-label="資金を登録・確認">'
-  +btn('貯金を追加','new-saving','','money-action')
-  +btn('ご祝儀を追加','new-gift','','money-action')
+  +btn('＋ 貯金','new-saving','','money-action')
+  +btn('＋ ご祝儀','new-gift','','money-action')
   +btn('支払い','money-detail','payments','money-action')
-  +btn('費用内訳','money-detail','costs','money-action')
+  +btn('内訳','money-detail','costs','money-action')
   +'</section>'
   +(v.included?'<p class="money-help">ご祝儀 '+yen(v.included)+' は貯金に含まれています</p>':'')
   +'</div>';

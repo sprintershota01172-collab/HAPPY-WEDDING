@@ -262,16 +262,22 @@ function savingsTotals(){
   usable:entries.filter(x=>x.available!==false).reduce((v,x)=>v+Math.max(0,n(x.amount)),0),
   registered:entries.length>0||state.savingsLedgerInitialized};
 }
+function savingsGroups(){
+ const groups=new Map();
+ for(const x of savingRecords()){
+  const key=JSON.stringify([x.owner||'未分類',x.bank||'口座未設定',x.account||'']);
+  if(!groups.has(key))groups.set(key,{owner:x.owner||'未分類',bank:x.bank||'口座未設定',account:x.account||'',amount:0,entries:[]});
+  const g=groups.get(key);g.entries.push(x);g.amount+=Math.max(0,n(x.amount));
+ }
+ return [...groups.values()];
+}
 function savingsRows(){
- const entries=savingRecords();
- if(!entries.length)return empty('貯金を追加するとここに表示されます。');
- return '<div class="list savings-list">'+entries.map(x=>
-  '<div class="item saving-row"><div class="content"><b class="item-title">'+e(x.owner||'持ち主未設定')+'</b>'
-  +'<span class="saving-purpose">'+e(x.purpose||'用途未設定')+'</span>'
-  +'<div class="item-sub">'+e(x.bank||'金融機関未設定')+(x.account?' · '+e(x.account):'')+'</div>'
-  +'<div class="item-sub">'+(x.available===false?'資金計算の対象外':'結婚式・旅行の資金に計上')+'</div></div>'
-  +'<div class="saving-right"><strong>'+yen(x.amount)+'</strong>'+btn(x.legacy?'分類':'編集','edit-saving',x.id,'ghost tiny')+'</div></div>'
- ).join('')+'</div>';
+ const groups=savingsGroups();
+ return groups.length?'<div class="list savings-list">'+groups.map(g=>
+  '<div class="item saving-row"><div class="content"><b class="item-title">'+e(g.owner)+'</b>'
+  +'<div class="item-sub">'+e(g.bank)+(g.account?' · '+e(g.account):'')+' · '+g.entries.length+'件</div></div>'
+  +'<div class="saving-right"><strong>'+yen(g.amount)+'</strong>'+btn('＋ 追加','new-saving',g.entries[0].id,'ghost tiny')+'</div></div>'
+ ).join('')+'</div>':empty('貯金を追加するとここに表示されます。');
 }
 function savingsAccountPage(){
  const t=savingsTotals();
@@ -281,26 +287,25 @@ function savingsAccountPage(){
  +'<div class="page-actions">'+btn('＋ 追加','new-saving','','primary')+'</div>'
  +savingsRows()+'<p class="caption">銀行名・口座の呼び名のみ登録してください。口座番号・暗証番号は不要です。</p>';
 }
-function savingEditor(uid=''){
- const x=savingRecords().find(x=>x.id===uid)||{};
- const suggestions=(name,values)=>'<datalist id="'+name+'">'+values.map(x=>'<option value="'+e(x)+'"></option>').join('')+'</datalist>';
- const fields='<p class="simple-editor-intro">金額・持ち主・銀行だけで登録できます。</p>'
-  +field('貯金額（円）','amount','number',x.amount??'',true,'min="0" inputmode="numeric" placeholder="例：1000000"')
-  +'<div class="field"><label for="saving-owner">誰の貯金？</label>'
-  +'<input id="saving-owner" name="owner" list="saving-owner-list" value="'+e(x.owner==='未分類'?'':x.owner||'')+'" placeholder="例：新郎／新婦／共同" required autocomplete="off">'
-  +suggestions('saving-owner-list',['新郎','新婦','共同','親・家族'])+'</div>'
-  +field('どこの貯金？','bank','text',x.bank==='口座未設定'?'':x.bank||'',true,'autocomplete="off" placeholder="例：楽天銀行／現金"')
-  +'<details class="editor-more"><summary>用途・口座名など（任意）</summary><div class="editor-more-inner">'
-  +'<div class="field"><label for="saving-purpose">用途</label>'
-  +'<input id="saving-purpose" name="purpose" list="saving-purpose-list" value="'+e(x.purpose==='用途未設定'?'':x.purpose||'')+'" placeholder="結婚式・新婚旅行" autocomplete="off">'
-  +suggestions('saving-purpose-list',['結婚式','新婚旅行','結婚式・新婚旅行','共有貯金','生活費','生活防衛資金','その他'])+'</div>'
-  +field('口座の呼び名','account','text',x.account||'',false,'autocomplete="off" placeholder="例：普通預金"')
-  +checkField('結婚資金に使う','available',x.available!==false)
-  +'<p class="field-hint">口座番号や暗証番号は入力しないでください。</p>'
-  +'</div></details>';
- modal(uid?'貯金を編集':'貯金を追加',fields,'saving',uid);
+function savingEditor(uid='',seedId=''){
+ const x=(uid?savingRecords().find(v=>v.id===uid):seedId?savingRecords().find(v=>v.id===seedId):null)||{};
+ const datalist=(key,opts)=>'<datalist id="'+key+'">'+opts.map(v=>'<option value="'+e(v)+'"></option>').join('')+'</datalist>';
+ const fields='<p class="saving-editor-intro">'+(uid?'この記録の金額を変更します。':'新しい貯金として合計に加算します。')+'</p>'
+ +field(uid?'登録した金額（円）':'今回追加する金額（円）','amount','number',uid?x.amount??'':'',true,'min="0" inputmode="numeric" placeholder="例：50000"')
+ +'<div class="field"><label for="saving-owner">誰の貯金？</label>'
+ +'<input id="saving-owner" name="owner" list="saving-owner-list" value="'+e(x.owner==='未分類'?'':x.owner||'')+'" placeholder="新郎／新婦／共同" required autocomplete="off">'
+ +datalist('saving-owner-list',['新郎','新婦','共同','親・家族'])+'</div>'
+ +field('どこの貯金？','bank','text',x.bank==='口座未設定'?'':x.bank||'',true,'autocomplete="off" placeholder="例：楽天銀行／現金"')
+ +'<details class="editor-more"><summary>日付・用途など（任意）</summary><div class="editor-more-inner">'
+ +field('日付','date','date',uid?x.date||'':today())
+ +'<div class="field"><label for="saving-purpose">用途</label><input id="saving-purpose" name="purpose" list="saving-purpose-list" value="'+e(x.purpose==='用途未設定'?'':x.purpose||'')+'" placeholder="結婚式・新婚旅行" autocomplete="off">'
+ +datalist('saving-purpose-list',['結婚式','新婚旅行','結婚式・新婚旅行','共有貯金','生活費','生活防衛資金','その他'])+'</div>'
+ +field('口座の呼び名','account','text',x.account||'',false,'autocomplete="off" placeholder="普通預金"')
+ +checkField('結婚資金に使う','available',x.available!==false)
+ +field('メモ','note','text',x.note||'')
+ +'<p class="field-hint">口座番号・暗証番号は入力しないでください。</p></div></details>';
+ modal(uid?'貯金の記録を編集':'貯金を追加',fields,'saving',uid);
 }
-
 
 /** Gift contributions may already be part of an entered savings balance.
  * Count them for the gift breakdown, but only add the non-deposited portion
@@ -525,12 +530,22 @@ function openMoneyDetails(kind){
  if(dialog.open)closeModal();
  let title='',body='';
  if(kind==='accounts'){
-  const records=savingRecords();
-  title='貯金の内訳';
-  body='<div class="money-detail-lead">合計 '+yen(savingsTotals().total)+'</div>'
+  const groups=savingsGroups();
+  title='貯金の管理';
+  body='<div class="money-detail-lead">貯金合計 '+yen(savingsTotals().total)+'</div>'
    +btn('＋ 貯金を追加','new-saving','','money-detail-add')
-   +(records.length?'<div class="money-detail-list">'+records.map(x=>moneyDetailItem(x.owner||'貯金',x.amount,(x.bank||'')+(x.account?' · '+x.account:'')+(x.available===false?' · 資金計算の対象外':''),'edit-saving',x.id)).join('')+'</div>'
-    :'<p class="money-detail-empty">貯金を登録するとここに表示されます。</p>');
+   +(groups.length?'<div class="saving-groups">'+groups.map(g=>
+    '<section class="saving-group">'
+    +'<div class="saving-group-top"><div class="saving-group-name"><b>'+e(g.owner)+'</b><small>'+e(g.bank)+(g.account?' · '+e(g.account):'')+'</small></div><strong>'+yen(g.amount)+'</strong></div>'
+    +'<div class="saving-group-bottom">'
+    +btn('＋ この口座に追加','new-saving',g.entries[0].id,'money-saving-add')
+    +'<details class="saving-history"><summary>履歴 '+g.entries.length+'件</summary>'
+    +'<div class="money-detail-list">'+g.entries.slice().reverse().map(x=>
+      moneyDetailItem(x.date||(x.legacy?'以前の残高':'登録済み'),x.amount,
+       (x.available===false?'資金計算の対象外':'')+(x.note?' · '+x.note:''),'edit-saving',x.id)
+     ).join('')+'</div></details></div></section>'
+   ).join('')+'</div>':'<p class="money-detail-empty">貯金の登録はまだありません。</p>')
+   +'<p class="money-detail-footnote">追加した金額は合計に加算されます。以前の登録も残ります。</p>';
  }else if(kind==='gifts'){
   const total=giftFunding(),guestGifts=state.guests.filter(g=>n(g.gift)>0);
   title='ご祝儀・支援金';
@@ -972,10 +987,12 @@ async function submit(form){
   }
   const before=state.savingsAccounts.find(x=>x.id===uid)||{};
   const row={...before,id:uid||id(),owner:v.owner.trim(),purpose:(v.purpose||'').trim()||'結婚式・新婚旅行',bank:v.bank.trim(),
-   account:(v.account||'').trim(),amount:Math.max(0,n(v.amount)),available:flBool(f,'available')};
+   account:(v.account||'').trim(),amount:Math.max(0,n(v.amount)),available:flBool(f,'available'),
+   date:(v.date||'').trim()||(uid?before.date||'':today()),note:(v.note||'').trim(),kind:uid?(before.kind||'balance'):'addition'};
   delete row.legacy;
-  write('savingsAccounts',row);closeModal();
-  toast(uid?'貯金の内訳を更新しました':'貯金を追加しました');return
+  closeModal();
+  write('savingsAccounts',row);
+  toast(uid?'貯金の記録を更新しました':'貯金に '+yen(row.amount)+' を追加しました');return
  }
  if(type==='savings'){closeModal();moneyView='accounts';render();return}
  if(type==='honeymoon'){
@@ -1144,7 +1161,7 @@ async function handleAction(target){
  +btn('費用の内訳','new-category','','money-menu-item')
  +'</div></details></div>');return}
  if(action==='edit-savings'){openMoneyDetails('accounts');return}
- if(action==='new-saving'){if(dialog.open)closeModal();savingEditor();return}
+ if(action==='new-saving'){if(dialog.open)closeModal();savingEditor('',uid||'');return}
  if(action==='edit-saving'){if(dialog.open)closeModal();savingEditor(uid);return}
  if(action==='edit-honeymoon'){if(dialog.open)closeModal();const c=honeymoonCategory();modal('新婚旅行費',
  '<p class="simple-editor-intro">旅行2人分の合計額を入力してください。</p>'

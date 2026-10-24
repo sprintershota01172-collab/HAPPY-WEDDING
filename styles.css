@@ -1068,3 +1068,44 @@ html,body,#app,#app *,#modal,#modal *,#toast,#toast *{
 
 .funding-start-actions{grid-template-columns:repeat(var(--guide-cols,3),minmax(0,1fr))}
 @media(max-width:350px){.funding-start-actions{grid-template-columns:repeat(min(2,var(--guide-cols,3)),minmax(0,1fr))}}
+
+
+/* r17: compact finance actions and directly accessible congratulatory gifts. */
+#main .page-head .btn.money-add-subtle{
+  flex:0 0 auto;display:inline-flex!important;align-items:center;justify-content:center;
+  min-height:29px!important;height:29px!important;
+  min-width:0!important;padding:4px 10px!important;border-radius:9px!important;
+  border:1px solid #dce5dc!important;background:transparent!important;
+  box-shadow:none!important;color:#6b8071!important;
+  font-size:10.5px!important;font-weight:600!important;line-height:1.1!important;
+}
+#main .page-head .btn.money-add-subtle:active{background:#f1f5f0!important}
+.funding-add-gift{
+  align-self:flex-start;min-height:24px;padding:3px 0!important;border:0!important;
+  background:transparent!important;color:#708b77!important;font-size:10px!important;
+  font-weight:600!important;text-align:left;box-shadow:none!important;
+}
+.gift-balance{padding:10px 12px!important}
+.gift-balance-title{gap:10px}
+.gift-balance .amount{font-size:clamp(21px,6vw,27px);font-weight:700;color:#365c48;margin:1px 0 3px}
+.gift-add-link.btn{
+  min-height:27px!important;padding:3px 8px!important;border:1px solid #dae6dc!important;
+  border-radius:8px!important;background:#fff!important;box-shadow:none!important;
+  color:#5c7a64!important;font-size:10px!important;font-weight:600!important;
+}
+.money-add-menu{
+  display:grid;grid-template-columns:repeat(2,minmax(0,1fr));
+  gap:7px;min-width:0;align-content:start;padding-top:3px;
+}
+.money-add-menu>.editor-more{grid-column:1/-1;margin-top:2px}
+.money-menu-item.btn{
+  width:100%;min-width:0;min-height:41px!important;padding:8px 7px!important;
+  border:1px solid #e1e9e1!important;background:#f9fbf8!important;
+  border-radius:10px!important;color:#4c6656!important;
+  font-size:11px!important;font-weight:600!important;box-shadow:none!important;
+}
+.money-menu-item.btn:active{background:#edf5ef!important}
+.money-add-menu .editor-more-inner.stack{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:7px}
+.modal-body>form[data-form="gift"]{overflow-y:auto!important;overscroll-behavior:contain;padding-right:2px;scrollbar-width:none}
+.modal-body>form[data-form="gift"]::-webkit-scrollbar{display:none}
+.modal-body>form[data-form="gift"]>.form-actions{position:sticky;bottom:0;background:#fff;margin-top:auto!important}

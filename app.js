@@ -241,7 +241,7 @@ function honeymoonQuote(){const c=honeymoonCategory();return c?Math.max(0,foreca
 function honeymoonPanel(){
  const c=honeymoonCategory(),planned=honeymoonQuote(),paid=c?paidCategory(c):0,remaining=Math.max(0,planned-paid);
  return '<div class="honeymoon-panel"><div class="honeymoon-label"><span>HONEYMOON BUDGET</span>'+btn('旅費を更新','edit-honeymoon','','light tiny')+'</div>'
-  +'<div class="honeymoon-cost"><span>新婚旅行の予定総額</span><button type="button" class="finance-amount-edit honeymoon-amount" data-action="edit-honeymoon" aria-label="新婚旅行費を登録・更新"><strong>'+(c?yen(planned):'未登録')+'</strong><small aria-hidden="true">✎</small></button></div>'
+  +'<div class="honeymoon-cost"><span>新婚旅行の予定総額</span><button type="button" class="finance-amount-edit honeymoon-amount" data-action="edit-honeymoon" aria-label="新婚旅行費を登録・更新"><strong>'+(c?yen(planned):'—')+'</strong><small aria-hidden="true">✎</small></button></div>'
   +'<div class="honeymoon-grid"><div><span>支払済み</span><strong>'+yen(paid)+'</strong></div><div><span>残りの支払い</span><strong>'+(c?yen(remaining):'—')+'</strong></div></div>'
   +'<p class="caption">新婚旅行費は結婚式の予算とは分け、必要資金の計算には含めます。支払いタブとの二重計上にご注意ください。</p></div>';
 }
@@ -321,30 +321,32 @@ function combinedFunding(){
   hasEntries:savings.registered||gifts.total>0};
 }
 function fundingBreakdownCard(){
-  const v=combinedFunding(), f=financeSummary();
-  const ready=f.costsSet&&f.savingsSet;
-  const remainingLabel=ready?yen(f.shortfall):'—';
-  const needLabel=f.costsSet?yen(f.required):'未登録';
-  const usableLabel=f.savingsSet?yen(f.savings):'未登録';
-  const info=!f.costsSet?'式の予算・旅費・必要品を入力すると計算できます':
-    !f.savingsSet?'貯金やご祝儀を登録すると、不足額を計算できます':
-    f.shortfall>0?'追加で準備したい金額':
-    '必要な資金は確保済み · 余裕 '+yen(f.surplus);
-  return '<div class="budget-funds">'
-  +'<div class="funding-need" aria-label="これから必要な結婚資金">'
-  +'<div class="funding-need-result"><span>あと必要な金額</span><strong>'+remainingLabel+'</strong><small>'+info+'</small></div>'
-  +'<div class="funding-need-math"><div><span>これから支払う額</span><b>'+needLabel+'</b></div><i aria-hidden="true">−</i><div><span>使える資金</span><b>'+usableLabel+'</b></div></div>'
-  +(f.costsSet?'<div class="funding-need-breakdown">式 '+yen(f.ceremonyFuture)+' ／ 旅行 '+yen(f.travelFuture)+(f.extraFuture?' ／ 必要品 '+yen(f.extraFuture):'')+'</div>':'')
-  +'</div>'
-  +'<div class="budget-funds-top"><div><span>結婚資金の合計</span><strong>'+(v.hasEntries?yen(v.total):'未登録')+'</strong></div>'
-  +'<small>貯金 ＋ ご祝儀・支援</small></div>'
+ const v=combinedFunding(),f=financeSummary(),savings=savingsTotals();
+ const ceremonyEntered=f.weddingPlan>0,travelEntered=honeymoonQuote()>0,savingsEntered=savings.entries.length>0;
+ const inputs=[
+  {name:'結婚式の総額',done:ceremonyEntered,action:'budget-total'},
+  {name:'新婚旅行費',done:travelEntered,action:'edit-honeymoon'},
+  {name:'貯金',done:savingsEntered,action:'new-saving'}
+ ];
+ const remaining=inputs.filter(x=>!x.done);
+ const missing='<span class="funding-empty-line" aria-label="金額の入力待ち"></span>';
+ // Do not show a potentially understated shortage before the wedding and honeymoon costs are both entered.
+ const ready=ceremonyEntered&&travelEntered&&f.savingsSet;
+ return '<div class="budget-funds">'
+  +'<div class="budget-funds-top"><div><span>結婚資金の合計</span><strong>'+(v.hasEntries?yen(v.total):missing)+'</strong></div><small>貯金 ＋ ご祝儀・支援</small></div>'
   +'<div class="budget-funds-sources">'
-  +'<button type="button" class="budget-fund-source" data-action="money-view" data-id="accounts"><span>貯金</span><b>'+(v.savingsSet?yen(v.savingsTotal):'未登録')+'</b></button>'
+  +'<button type="button" class="budget-fund-source" data-action="money-view" data-id="accounts"><span>貯金</span><b>'+(v.savingsSet?yen(v.savingsTotal):missing)+'</b></button>'
   +'<button type="button" class="budget-fund-source" data-action="money-view" data-id="gifts"><span>ご祝儀・支援</span><b>'+yen(v.giftTotal+v.guestTotal)+'</b></button></div>'
-  +(v.included?'<div class="budget-funds-note">貯金に含むご祝儀 '+yen(v.included)+' は重複計上しません</div>':'')
-  +'<p class="funding-need-footnote">「あと必要」は未払いの式・旅費・必要品 − 使用可能な資金。生活費など対象外の貯金は含めません。</p>'
+  +(v.included?'<div class="budget-funds-note">貯金に含むご祝儀 '+yen(v.included)+' は二重に足していません</div>':'')
+  +'<div class="funding-need" aria-label="追加で必要な資金">'
+  +'<div class="funding-need-result"><span>これから必要な金額</span>'
+  +'<strong class="'+(ready?'':'funding-pending')+'">'+(ready?yen(f.shortfall):missing)+'</strong>'
+  +'<small>'+(ready?(f.shortfall>0?'今後の支払いに対する不足分':'必要額を確保できています'):'式・旅費・貯金を入力すると表示します')+'</small></div></div>'
+  +(remaining.length?'<div class="funding-start"><div class="funding-start-head"><b>まず入力する金額</b><small>'+(3-remaining.length)+'/3 完了</small></div>'
+   +'<div class="funding-start-actions">'+remaining.map(x=>'<button type="button" data-action="'+x.action+'"><span>'+x.name+'</span><span aria-hidden="true">＋</span></button>').join('')+'</div></div>':'')
   +'</div>';
 }
+
 function financeSummary(){
   const source=savingsTotals(), gifts=giftFunding(), honeymoon=honeymoonCategory();
   const plannedFor=c=>{
@@ -374,9 +376,9 @@ function financeSummary(){
 function financePanel(compact=false){
  const f=financeSummary();
  return '<div class="finance-overview '+(compact?'compact':'')+'"><div class="finance-top"><div class="eyebrow">資金状況</div>'+btn('内訳','edit-savings','','ghost tiny')+'</div>'
- +'<div class="finance-main"><span>貯金合計</span><button type="button" class="finance-amount-edit" data-action="edit-savings" aria-label="貯金額を更新"><strong>'+(f.savingsSet?yen(f.savingsTotal):'未登録')+'</strong><small aria-hidden="true">✎</small></button></div>'
- +'<div class="finance-available">利用可能額 <b>'+(f.savingsSet?yen(f.savings):'未登録')+'</b></div>'
- +'<div class="finance-pairs"><div><span>必要額</span><strong>'+(f.costsSet?yen(f.required):'未登録')+'</strong></div>'
+ +'<div class="finance-main"><span>貯金合計</span><button type="button" class="finance-amount-edit" data-action="edit-savings" aria-label="貯金額を更新"><strong>'+(f.savingsSet?yen(f.savingsTotal):'—')+'</strong><small aria-hidden="true">✎</small></button></div>'
+ +'<div class="finance-available">利用可能額 <b>'+(f.savingsSet?yen(f.savings):'—')+'</b></div>'
+ +'<div class="finance-pairs"><div><span>必要額</span><strong>'+(f.costsSet?yen(f.required):'—')+'</strong></div>'
  +'<div class="'+(f.shortfall?'needs-money':'enough-money')+'"><span>'+(f.savingsSet&&f.costsSet?(f.shortfall?'不足額':'残額'):'不足額')+'</span><strong>'+(f.savingsSet&&f.costsSet?yen(f.shortfall||f.surplus):'—')+'</strong></div></div>'
  +'<p class="finance-note">未払い '+yen(f.categoryFuture)+' ＋ 追加費用 '+yen(f.extraFuture)+'</p></div>';
 }
@@ -447,25 +449,26 @@ function budgetInsights(){
   fundingRatio:funds.costsSet&&funds.required>0&&funds.savingsSet?funds.savings/funds.required:null,
   budgetRatio:target?ceremonyCost/target:null,paymentRatio:paymentTotal?paymentsPaid/paymentTotal:null};
 }
-function budgetRing(label,ratio,sub,kind){
+function budgetProgressLine(label,ratio,color){
  const ready=ratio!==null&&Number.isFinite(ratio)&&ratio>=0;
- const value=ready?Math.round(ratio*100):null,deg=ready?Math.min(360,ratio*360):0;
- const color=kind==='budget'&&ratio>1?'#b86f78':kind==='fund'?'#759e89':kind==='paid'?'#83a2a1':'#b68c92';
- return '<div class="budget-ring-unit"><div class="budget-ring" style="--ring-color:'+color+';--ring-deg:'+deg+'deg" role="img" aria-label="'+e(label)+' '+(ready?value+'%':'未設定')+'">'
-  +'<span class="budget-ring-center">'+(ready?value+'%':'—')+'</span></div>'
-  +'<b>'+e(label)+'</b><small>'+e(sub)+'</small></div>';
+ const value=ready?Math.round(ratio*100):0;
+ return '<div class="funding-progress-line">'
+  +'<div class="funding-progress-label"><span>'+e(label)+'</span><b>'+(ready?value+'%':'—')+'</b></div>'
+  +'<div class="funding-progress-track" role="meter" aria-label="'+e(label)+'" aria-valuemin="0" aria-valuemax="100" '+(ready?'aria-valuenow="'+Math.min(100,value)+'"':'aria-valuetext="入力待ち"')+'>'
+  +'<span style="width:'+(ready?Math.min(100,value):0)+'%;background:'+color+'"></span></div></div>';
 }
 function budgetDonuts(){
  const r=budgetInsights();
- return '<section class="budget-charts budget-charts-main" aria-label="貯金とご祝儀・予算の進捗">'
- +fundingBreakdownCard()
- +'<div class="budget-section-title"><b>進捗グラフ</b>'+btn('予算設定','budget-total','','ghost tiny')+'</div>'
- +'<div class="budget-ring-grid">'
- +budgetRing('資金達成率',r.fundingRatio,r.fundingRatio===null?'未登録':'使える資金 ÷ 未払い額','fund')
- +budgetRing('予算使用率',r.budgetRatio,r.budgetRatio===null?'予算未設定':r.budgetRatio>1?'予算超過':'見込 ÷ 予算','budget')
- +budgetRing('支払進捗',r.paymentRatio,r.paymentRatio===null?'未登録':'支払済 ÷ 見込','paid')
- +'</div></section>';
+ const rows=[
+  budgetProgressLine('資金の準備',r.fundingRatio,'#759e89'),
+  budgetProgressLine('支払いの進捗',r.paymentRatio,'#83a2a1')
+ ];
+ if(r.budgetRatio!==null)rows.push(budgetProgressLine('予算の使用',r.budgetRatio,r.budgetRatio>1?'#b86f78':'#b68c92'));
+ return '<section class="budget-charts budget-charts-main" aria-label="結婚資金と進捗">'
+  +fundingBreakdownCard()
+  +'<div class="funding-progress"><div class="budget-section-title"><b>進み具合</b></div>'+rows.join('')+'</div></section>';
 }
+
 function budgetComposition(){
  const r=budgetInsights(),sorted=r.parts.filter(x=>x.value>0).sort((a,b)=>b.value-a.value);
  const total=sorted.reduce((v,x)=>v+x.value,0);

@@ -1023,3 +1023,45 @@ html,body,#app,#app *,#modal,#modal *,#toast,#toast *{
   .funding-need-footnote{font-size:8.5px}
   .budget-charts-main .budget-ring{width:66px}
 }
+
+
+/* r16: understated empty balances, compact onboarding and slim progress indicators. */
+.funding-empty-line{display:inline-block;width:58px;height:4px;max-width:100%;background:#d9e3da;border-radius:999px;vertical-align:middle}
+.funding-pending{font-size:17px!important;line-height:1.15!important}
+.funding-pending .funding-empty-line{width:72px}
+.budget-funds{gap:7px!important;padding-bottom:10px!important}
+.budget-funds-top{gap:6px!important}
+.budget-funds-top strong .funding-empty-line{width:76px}
+.budget-fund-source b .funding-empty-line{width:45px}
+.funding-need{padding:8px 10px!important;border-radius:11px!important;gap:2px!important;background:#f6f9f4!important}
+.funding-need-result>span{font-size:10.5px!important;color:#6b826f!important}
+.funding-need-result>strong{font-size:clamp(20px,6vw,27px)!important;letter-spacing:0!important}
+.funding-need-result>small{font-size:10px!important}
+.funding-need-result{gap:4px!important}
+.funding-start{display:flex;flex-direction:column;gap:6px;padding-top:2px}
+.funding-start-head{display:flex;justify-content:space-between;align-items:center;gap:8px}
+.funding-start-head b{font-size:11px;color:#526b5b}
+.funding-start-head small{font-size:9px;color:#8b9c90}
+.funding-start-actions{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:5px}
+.funding-start-actions button{display:flex;justify-content:space-between;align-items:center;gap:3px;min-width:0;min-height:37px;padding:7px 7px;border:1px solid #dce7de;border-radius:9px;background:#fff;color:#426250;font-size:10.5px;font-weight:600;text-align:left}
+.funding-start-actions button>span:last-child{font-size:16px;font-weight:400;color:#789483}
+.funding-start-actions button:active{background:#edf5ee}
+.funding-progress{display:flex;flex-direction:column;gap:8px}
+.funding-progress .budget-section-title{margin-bottom:0!important;min-height:18px}
+.funding-progress-line{display:flex;flex-direction:column;gap:4px}
+.funding-progress-label{display:flex;align-items:center;justify-content:space-between;font-size:10.5px;color:#607469}
+.funding-progress-label b{font-size:11px;color:#446150;font-variant-numeric:tabular-nums}
+.funding-progress-track{width:100%;height:5px;display:block;border-radius:999px;background:#e9eee8;overflow:hidden}
+.funding-progress-track>span{display:block;height:100%;border-radius:inherit;transition:width .2s ease}
+.simple-editor-intro{font-size:11px;color:#667969;margin:0 0 6px;line-height:1.5}
+.editor-more{border:1px solid #e3eae2;border-radius:10px;background:#f9fbf8;margin-top:7px;flex:0 0 auto}
+.editor-more>summary{cursor:pointer;list-style:none;display:flex;justify-content:space-between;align-items:center;gap:8px;min-height:38px;padding:8px 10px;font-size:11px;font-weight:600;color:#647a6a;user-select:none}
+.editor-more>summary::-webkit-details-marker{display:none}
+.editor-more>summary::after{content:'⌄';font-size:15px;color:#93a99a}
+.editor-more[open]>summary::after{content:'⌃'}
+.editor-more-inner{padding:1px 10px 8px;border-top:1px solid #e9eeea}
+.editor-more-inner.stack{display:flex;flex-direction:column;gap:6px;padding-top:9px}
+.modal-body>form[data-form="saving"],.modal-body>form[data-form="honeymoon"],.modal-body>form[data-form="category"],.modal-body>form[data-form="budget-total"]{overflow-y:auto!important;overscroll-behavior:contain;padding-right:2px;scrollbar-width:none}
+.modal-body>form[data-form="saving"]::-webkit-scrollbar,.modal-body>form[data-form="honeymoon"]::-webkit-scrollbar,.modal-body>form[data-form="category"]::-webkit-scrollbar,.modal-body>form[data-form="budget-total"]::-webkit-scrollbar{display:none}
+.modal-body>form[data-form="saving"]>.form-actions,.modal-body>form[data-form="honeymoon"]>.form-actions,.modal-body>form[data-form="category"]>.form-actions,.modal-body>form[data-form="budget-total"]>.form-actions{position:sticky;bottom:0;background:#fff;margin-top:auto!important}
+@media(max-width:350px){.funding-start-actions{grid-template-columns:repeat(2,minmax(0,1fr))}.funding-start-actions button{min-height:35px;font-size:10px}}

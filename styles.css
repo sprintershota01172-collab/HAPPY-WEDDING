@@ -1270,3 +1270,62 @@ html,body,#app,#app *,#modal,#modal *,#toast,#toast *{
 .saving-history>.money-detail-list{margin-top:6px}
 .saving-history .money-detail-item{padding:7px 0}
 .saving-editor-intro{margin:0 0 4px;font-size:11px;line-height:1.6;color:#708873}
+
+
+/* Sakura Vow brand: yamabuki green × light yellow, October 2026. */
+:root{
+ --pink:#A5A958;--pink-soft:#F9F5D8;--blush:#F4EFC6;--beige:#F7F3DC;
+ --mint:#DFE6AC;--deep:#505A24;--muted:#828969;--line:#E5E9C2;
+ --ink:#404D25;--accent:#8B9742;--rose:#F3EFA9;--sage:#A7B268;
+ --ui-green:#647335;--ui-bg:#FCFAE9;--ui-text:#414C2D;--ui-line:#E4E8C7;
+ --shadow:0 6px 18px rgba(105,116,48,.08)
+}
+html,body,#app{background:#FCFAE9!important;color:#414D2A}
+body{background:linear-gradient(145deg,#FFFDF2 0%,#FAF8DE 100%)!important}
+.app-header{background:rgba(252,250,225,.95)!important;border-bottom:1px solid #E3E6BA!important}
+.brand{color:#52622B!important;font-weight:750!important;letter-spacing:.018em!important}
+.brand-symbol{font-size:0!important;width:23px;height:23px;background:url("./icon.svg") center/contain no-repeat;flex:0 0 23px}
+.connection{background:#F1F3D7!important;color:#788545!important;border-color:#E2E8B8!important}
+.bottom-nav{background:rgba(255,253,234,.98)!important;border-color:#E5E7BC!important}
+.bottom-nav button{color:#8A9267!important}
+.bottom-nav button.active{background:#EEF1C9!important;color:#5A6B2E!important}
+.card,.metric,.money-tile,.money-cost-card,.saving-group{border-color:#E7EAC7!important;background:#FFFDF1!important}
+.page-head h1,.section-title h2,.money-group-heading b{color:#53612A!important}
+.btn.primary,.floating-add{background:#8C9A48!important;color:#fffdf2!important;box-shadow:0 5px 13px rgba(109,124,55,.16)!important}
+.btn.light,.btn.mint,.btn.ghost{background:#F1F3CE!important;color:#62743B!important}
+.money-status{background:linear-gradient(130deg,#7A8B37,#A5AC53)!important;border-color:#95A04A!important;box-shadow:0 4px 16px rgba(121,128,48,.13)!important}
+.money-status-label,.money-status-figures small,.money-status-hint{color:#F4F3D1!important}
+.money-status-value,.money-status-figures b{color:#FFFEEB!important}
+.money-status-meter>span{background:#F9E88D!important}
+.money-tile-icon,.money-cost-icon{background:#F1F2CE!important;color:#7B8E3F!important}
+.money-tile strong,.money-cost-total>strong,.money-detail-lead,.saving-group-top>strong{color:#586B2E!important}
+.money-cost-head b,.money-tile-name{color:#63743C!important}
+.money-cost-track>span{background:#95A957!important}
+.money-cost-track{background:#E9E9B9!important}
+.money-paid strong{color:#66843C!important}
+.money-remaining strong{color:#9A8130!important}
+.money-forecast-strip{
+ width:100%;display:flex;align-items:center;gap:8px;padding:10px 11px;border-radius:12px;
+ background:linear-gradient(115deg,#F4F2C4,#FAF7DE);border:1px solid #E8E6AE;
+ color:#526B34;text-align:left;min-width:0;box-shadow:none;
+}
+.money-forecast-strip:active{background:#F0EEBA}
+.money-forecast-icon{font-family:"DM Sans",sans-serif!important;flex:0 0 23px;width:23px;height:23px;border-radius:8px;background:#DBE5A4;display:grid;place-items:center;font-size:17px;color:#6D803C}
+.money-forecast-label{display:flex;flex:1;flex-direction:column;gap:2px;min-width:0}
+.money-forecast-label b{font-size:11px;font-weight:700;color:#596D34}
+.money-forecast-label small{font-size:9px;color:#8E985E}
+.money-forecast-strip strong{font-family:"DM Sans",sans-serif!important;font-weight:750;font-size:clamp(14px,4vw,18px);letter-spacing:-.025em;color:#5D742A;white-space:nowrap}
+.money-forecast-strip>span:last-child{font-size:17px;color:#9CA75C}
+.money-forecast-outcome{display:flex;align-items:center;justify-content:space-between;gap:7px;margin-top:-5px;padding:3px 5px;font-size:10px;color:#7A8547}
+.money-forecast-outcome b{color:#5B7132;font-variant-numeric:tabular-nums;font-size:12px}
+.forecast-list{display:flex;flex-direction:column;gap:7px;margin-top:11px}
+.forecast-entry{display:flex;align-items:center;gap:7px;padding:9px 4px;border-bottom:1px solid #E9EBCB;min-width:0}
+.forecast-entry-left{display:flex;flex:1;flex-direction:column;gap:3px;min-width:0}
+.forecast-entry-left b{font-size:12px;color:#546738;white-space:nowrap;text-overflow:ellipsis;overflow:hidden}
+.forecast-entry-left small{font-size:10px;color:#86935E}
+.forecast-entry>strong{font-family:"DM Sans",sans-serif!important;color:#5D7135;font-size:13px;white-space:nowrap}
+.forecast-edit.btn{min-height:30px!important;padding:5px 8px!important;border:1px solid #E0E6BF!important;background:#FBFAE7!important;color:#718046!important;font-size:10px!important;box-shadow:none!important}
+#main .money-actions .btn.money-action,.money-menu-item.btn,.money-detail-add.btn,.money-saving-add.btn{border-color:#E0E7BB!important;background:#F3F5D4!important;color:#62773C!important}
+input,select,textarea{accent-color:#899B4A}
+:focus-visible{outline:2px solid #A2AE62!important;outline-offset:2px}
+@media(max-width:370px){.money-forecast-strip{padding:9px 8px;gap:5px}.money-forecast-label b{font-size:10px}.money-forecast-strip strong{font-size:13px}}

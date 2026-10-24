@@ -1149,17 +1149,18 @@ async function handleAction(target){
  if(action==='edit-honeymoon'){if(dialog.open)closeModal();const c=honeymoonCategory();modal('新婚旅行費',
  '<p class="simple-editor-intro">旅行2人分の合計額を入力してください。</p>'
  +field('旅行の総額（円）','honeymoonTotal','number',c?(forecastCat(c)||n(c.budget)):0,true,'min="0" inputmode="numeric"')
- +'<details class="editor-more"><summary>支払い済み・予算（任意）</summary><div class="editor-more-inner">'
- +field('支払済み（円）','honeymoonPaid','number',c?.manualPaid||0,false,'min="0" inputmode="numeric"')
+ +field('明細以外の支払済み（円）','honeymoonPaid','number',c?.manualPaid||0,false,'min="0" inputmode="numeric"')
+ +'<p class="money-editor-tip">支払い明細に登録した金額は自動で集計します。</p>'
+ +'<details class="editor-more"><summary>旅行予算（任意）</summary><div class="editor-more-inner">'
  +field('旅行予算（円）','honeymoonBudget','number',c?.budget||0,false,'min="0" inputmode="numeric"')
- +'<p class="field-hint">支払いタブで登録済みの金額は重複入力しないでください。</p></div></details>','honeymoon');return}
+ +'</div></details>','honeymoon');return}
  if(action==='budget-total'){
    if(dialog.open)closeModal();
    const f=financeSummary();
    modal('結婚式の支払い状況',
     '<div class="money-cost-editor">'
     +field('結婚式の総額（円）','budget','number',state.budgetTotal||'',true,'min="0" inputmode="numeric" placeholder="例：4800000"')
-    +field('支払済み合計（円）','weddingPaidDirect','number',Math.max(n(state.weddingPaidDirect),f.weddingPaid)||'',true,'min="0" inputmode="numeric" placeholder="例：500000"')
+    +field('支払済み合計（円）','weddingPaidDirect','number',Math.max(n(state.weddingPaidDirect),f.weddingPaid),true,'min="0" inputmode="numeric" placeholder="例：500000"')
     +'<p class="money-editor-tip">これまでに払った金額の合計を入力。明細と重複しても二重計上しません。</p>'
     +'</div>','budget-total');return
   }

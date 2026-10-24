@@ -1065,3 +1065,6 @@ html,body,#app,#app *,#modal,#modal *,#toast,#toast *{
 .modal-body>form[data-form="saving"]::-webkit-scrollbar,.modal-body>form[data-form="honeymoon"]::-webkit-scrollbar,.modal-body>form[data-form="category"]::-webkit-scrollbar,.modal-body>form[data-form="budget-total"]::-webkit-scrollbar{display:none}
 .modal-body>form[data-form="saving"]>.form-actions,.modal-body>form[data-form="honeymoon"]>.form-actions,.modal-body>form[data-form="category"]>.form-actions,.modal-body>form[data-form="budget-total"]>.form-actions{position:sticky;bottom:0;background:#fff;margin-top:auto!important}
 @media(max-width:350px){.funding-start-actions{grid-template-columns:repeat(2,minmax(0,1fr))}.funding-start-actions button{min-height:35px;font-size:10px}}
+
+.funding-start-actions{grid-template-columns:repeat(var(--guide-cols,3),minmax(0,1fr))}
+@media(max-width:350px){.funding-start-actions{grid-template-columns:repeat(min(2,var(--guide-cols,3)),minmax(0,1fr))}}

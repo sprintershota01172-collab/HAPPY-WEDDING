@@ -233,7 +233,7 @@ function updateSetupDays(){
  if(previous&&Number(previous)<=maxDay)el.value=previous;
 }
 
-function renderSetup(){const step=state.setup===1?2:1;return '<div class="setup"><div class="setup-flower">✿ ♡ ✿</div><h1>Sakura Vow</h1><p>ふたりの特別な一日まで。<br>準備も一緒に楽しもう。</p><div class="card">'+(step===1?'<div class="eyebrow">STEP 1 / 2</div><h2>挙式日はいつ？</h2><form data-form="setup1" novalidate>'+renderSetupDate()+'<button class="btn primary btn-wide">次へ →</button></form>':'<div class="eyebrow">STEP 2 / 2</div><h2>あなたの役割は？</h2><form data-form="setup2">'+selectField('role','あなたの役割',state.roles,state.myRole)+'<button class="btn primary btn-wide">はじめる ♡</button></form>')+'</div><p>あとから設定を変更できます。<br>データは自動でこの端末に保存されます。</p></div>'}
+function renderSetup(){const step=state.setup===1?2:1;return '<div class="setup"><div class="setup-flower">✿ ♡ ✿</div><h1>HAPPWED</h1><p>ふたりの特別な一日まで。<br>準備も一緒に楽しもう。</p><div class="card">'+(step===1?'<div class="eyebrow">STEP 1 / 2</div><h2>挙式日はいつ？</h2><form data-form="setup1" novalidate>'+renderSetupDate()+'<button class="btn primary btn-wide">次へ →</button></form>':'<div class="eyebrow">STEP 2 / 2</div><h2>あなたの役割は？</h2><form data-form="setup2">'+selectField('role','あなたの役割',state.roles,state.myRole)+'<button class="btn primary btn-wide">はじめる ♡</button></form>')+'</div><p>あとから設定を変更できます。<br>データは自動でこの端末に保存されます。</p></div>'}
 
 
 function honeymoonCategory(){return state.categories.find(c=>c.name==='新婚旅行'||c.id==='hw-honeymoon')||null}
@@ -1163,7 +1163,7 @@ function remind(){
  const msg=unseen.length===1?unseen[0].kind+'「'+unseen[0].title+'」の期限を確認してください。':unseen.length+'件の予定・タスク・支払いなどを確認してください。';
  toast(msg);
  if('Notification' in window&&Notification.permission==='granted'&&!document.hidden){
-  try{new Notification('Sakura Vow リマインド',{body:msg,icon:'./icon.svg'})}catch{}
+  try{new Notification('HAPPWED リマインド',{body:msg,icon:'./icon.svg'})}catch{}
  }
 }
 

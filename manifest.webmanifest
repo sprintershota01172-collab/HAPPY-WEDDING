@@ -9,7 +9,13 @@
   "theme_color": "#FCFAE9",
   "icons": [
     {
-      "src": "./icon.svg?v=20261102r26",
+      "src": "./happwed-icon-v2.png?v=20261102r27",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "./icon.svg?v=20261102r27",
       "sizes": "any",
       "type": "image/svg+xml",
       "purpose": "any maskable"

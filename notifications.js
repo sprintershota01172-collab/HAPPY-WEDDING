@@ -53,7 +53,7 @@ export function receivePartnerActivity(entry,meta={}){
   const message=(event.actor||'パートナー')+'が'+(event.section||'準備')+'を'+(event.verb||'更新')+'しました';
   hooks.toast(message);
   if(document.hidden&&'Notification' in window&&Notification.permission==='granted'){
-   try{new Notification('Happy Wedding',{body:message,icon:'./icon.svg'})}catch{}
+   try{new Notification('HAPPWED',{body:message,icon:'./icon.svg'})}catch{}
   }
  }
 }

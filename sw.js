@@ -1,5 +1,5 @@
-const CACHE = 'happwed-v30-20261102r26';
-const SHELL = ['./','./index.html','./styles.css?v=20261102r26','./app.js?v=20261102r26','./sync.js','./notifications.js','./manifest.webmanifest','./icon.svg?v=20261102r26'];
+const CACHE = 'happwed-v31-20261102r27';
+const SHELL = ['./','./index.html','./styles.css?v=20261102r27','./app.js?v=20261102r27','./sync.js','./notifications.js','./manifest.webmanifest','./icon.svg?v=20261102r27','./happwed-icon-v2.png?v=20261102r27'];
 self.addEventListener('install', e => { e.waitUntil(caches.open(CACHE).then(c=>c.addAll(SHELL)).then(()=>self.skipWaiting())); });
 self.addEventListener('activate', e => { e.waitUntil(caches.keys().then(keys=>Promise.all(keys.filter(k=>k!==CACHE).map(k=>caches.delete(k)))).then(()=>self.clients.claim())); });
 self.addEventListener('fetch',event=>{
